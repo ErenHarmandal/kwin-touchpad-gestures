@@ -1,0 +1,34 @@
+# Local agent/editor state
+.obsidian/
+docs/**/.obsidian/
+
+# Secrets and local config
+.env
+.env.*
+*.pfx
+*.pem
+*.key
+*.jks
+*.keystore
+appsettings.Production.json
+secrets.json
+
+# Common build/cache output
+bin/
+obj/
+build/
+dist/
+out/
+.gradle/
+.idea/
+.vs/
+node_modules/
+
+# Arch packaging output
+src/
+pkg/
+*.pkg.tar*
+*.tar
+*.tar.*
+*.sig
+*.log

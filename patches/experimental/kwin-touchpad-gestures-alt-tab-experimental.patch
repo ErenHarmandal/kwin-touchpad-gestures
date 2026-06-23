@@ -1,0 +1,200 @@
+diff --git a/src/plugins/overview/overvieweffect.cpp b/src/plugins/overview/overvieweffect.cpp
+index d9be30e..8661e99 100644
+--- a/src/plugins/overview/overvieweffect.cpp
++++ b/src/plugins/overview/overvieweffect.cpp
+@@ -33,6 +33,7 @@ OverviewEffect::OverviewEffect()
+     , m_shutdownTimer(new QTimer(this))
+ {
+     auto gesture = new EffectTogglableGesture(m_overviewState);
++    gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 3);
+     gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 4);
+     gesture->addTouchscreenSwipeGesture(SwipeDirection::Up, 3);
+ 
+diff --git a/src/tabbox/tabbox.cpp b/src/tabbox/tabbox.cpp
+index d76026a..50ff9f6 100644
+--- a/src/tabbox/tabbox.cpp
++++ b/src/tabbox/tabbox.cpp
+@@ -285,6 +285,12 @@ TabBox::TabBox()
+ 
+     m_tabBoxMode = TabBoxWindowsMode; // init variables
+     connect(&m_delayedShowTimer, &QTimer::timeout, this, &TabBox::show);
++    m_touchpadAcceptTimer.setSingleShot(true);
++    connect(&m_touchpadAcceptTimer, &QTimer::timeout, this, [this]() {
++        if (isDisplayed() && m_noModifierGrab) {
++            accept();
++        }
++    });
+     connect(Workspace::self(), &Workspace::configChanged, this, &TabBox::reconfigure);
+ }
+ 
+@@ -330,6 +336,14 @@ void TabBox::initShortcuts()
+     key(s_appAlt, &TabBox::slotWalkThroughCurrentAppWindowsAlternative);
+     key(s_appAltRev, &TabBox::slotWalkBackThroughCurrentAppWindowsAlternative);
+ 
++    QAction *touchpadWalkForward = new QAction(this);
++    connect(touchpadWalkForward, &QAction::triggered, this, &TabBox::slotTouchpadWalkThroughWindows);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, touchpadWalkForward);
++
++    QAction *touchpadWalkBackward = new QAction(this);
++    connect(touchpadWalkBackward, &QAction::triggered, this, &TabBox::slotTouchpadWalkBackThroughWindows);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, touchpadWalkBackward);
++
+     connect(KGlobalAccel::self(), &KGlobalAccel::globalShortcutChanged, this, [this](QAction *action) {
+         globalShortcutChanged(action, KGlobalAccel::self()->shortcut(action));
+     });
+@@ -734,6 +748,16 @@ void TabBox::slotWalkBackThroughCurrentAppWindowsAlternative()
+     navigatingThroughWindows(false, m_cutWalkThroughCurrentAppWindowsAlternativeReverse, TabBoxCurrentAppWindowsAlternativeMode);
+ }
+ 
++void TabBox::slotTouchpadWalkThroughWindows()
++{
++    touchpadWalkThroughWindows(true);
++}
++
++void TabBox::slotTouchpadWalkBackThroughWindows()
++{
++    touchpadWalkThroughWindows(false);
++}
++
+ bool TabBox::toggle(ElectricBorder eb)
+ {
+     if (m_borderAlternativeActivate.contains(eb)) {
+@@ -794,6 +818,38 @@ void TabBox::KDEWalkThroughWindows(bool forward)
+     nextPrev(forward);
+ }
+ 
++void TabBox::touchpadWalkThroughWindows(bool forward)
++{
++    if (!options->focusPolicyIsReasonable()) {
++        CDEWalkThroughWindows(forward);
++        return;
++    }
++
++    if (isDisplayed()) {
++        KDEWalkThroughWindows(forward);
++    } else {
++        if (!establishTabBoxGrab()) {
++            return;
++        }
++        m_tabGrab = true;
++        m_noModifierGrab = true;
++
++        input()->keyboard()->update();
++        input()->pointer()->setEnableConstraints(false);
++
++        setMode(TabBoxWindowsMode);
++        reset();
++
++        if (haveActiveClient()) {
++            nextPrev(forward);
++        }
++
++        show();
++    }
++
++    m_touchpadAcceptTimer.start(1100);
++}
++
+ void TabBox::CDEWalkThroughWindows(bool forward)
+ {
+     Window *c = nullptr;
+diff --git a/src/tabbox/tabbox.h b/src/tabbox/tabbox.h
+index 43b2dbd..3f83627 100644
+--- a/src/tabbox/tabbox.h
++++ b/src/tabbox/tabbox.h
+@@ -226,6 +226,8 @@ public Q_SLOTS:
+     void slotWalkBackThroughCurrentAppWindows();
+     void slotWalkThroughCurrentAppWindowsAlternative();
+     void slotWalkBackThroughCurrentAppWindowsAlternative();
++    void slotTouchpadWalkThroughWindows();
++    void slotTouchpadWalkBackThroughWindows();
+ 
+     void handlerReady();
+ 
+@@ -251,6 +253,7 @@ private:
+     bool startKDEWalkThroughWindows(bool forward, TabBoxMode mode); // TabBoxWindowsMode | TabBoxWindowsAlternativeMode
+     void navigatingThroughWindows(bool forward, const QList<QKeySequence> &shortcut, TabBoxMode mode); // TabBoxWindowsMode | TabBoxWindowsAlternativeMode
+     void KDEWalkThroughWindows(bool forward);
++    void touchpadWalkThroughWindows(bool forward);
+     void CDEWalkThroughWindows(bool forward);
+     void KDEOneStepThroughWindows(bool forward, TabBoxMode mode); // TabBoxWindowsMode | TabBoxWindowsAlternativeMode
+     bool establishTabBoxGrab();
+@@ -272,6 +275,7 @@ private:
+     int m_delayShowTime;
+ 
+     QTimer m_delayedShowTimer;
++    QTimer m_touchpadAcceptTimer;
+     int m_displayRefcount;
+ 
+     TabBoxConfig m_defaultConfig;
+diff --git a/src/useractions.cpp b/src/useractions.cpp
+index a77a8ac..17d1c3a 100644
+--- a/src/useractions.cpp
++++ b/src/useractions.cpp
+@@ -980,6 +980,9 @@ void Workspace::initShortcuts()
+ 
+     initShortcut("Show Desktop", i18n("Peek at Desktop"),
+                  Qt::META | Qt::Key_D, &Workspace::slotToggleShowDesktop, false);
++    QAction *showDesktopTouchpadAction = new QAction(this);
++    connect(showDesktopTouchpadAction, &QAction::triggered, this, &Workspace::slotToggleShowDesktop);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, showDesktopTouchpadAction);
+ 
+     initShortcut("Kill Window", i18n("Kill Window"), Qt::META | Qt::CTRL | Qt::Key_Escape, &Workspace::slotKillWindow, true);
+ 
+diff --git a/src/virtualdesktops.cpp b/src/virtualdesktops.cpp
+index a7414d2..e01e9dd 100644
+--- a/src/virtualdesktops.cpp
++++ b/src/virtualdesktops.cpp
+@@ -803,22 +803,8 @@ void VirtualDesktopManager::initShortcuts()
+             emitCurrentChanging();
+         }
+     };
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
+     input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 4, m_swipeGestureReleasedX.get(), left);
+     input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 4, m_swipeGestureReleasedX.get(), right);
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, m_swipeGestureReleasedY.get(), [this, emitCurrentChanging](qreal cb) {
+-        if (grid().height() > 1) {
+-            m_currentDesktopOffset.setY(-cb);
+-            emitCurrentChanging();
+-        }
+-    });
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Up, 3, m_swipeGestureReleasedY.get(), [this, emitCurrentChanging](qreal cb) {
+-        if (grid().height() > 1) {
+-            m_currentDesktopOffset.setY(cb);
+-            emitCurrentChanging();
+-        }
+-    });
+     input()->registerTouchscreenSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
+     input()->registerTouchscreenSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
+ 
+diff --git a/src/gestures.cpp b/src/gestures.cpp
+index 864c8da..b1cecf3 100644
+--- a/src/gestures.cpp
++++ b/src/gestures.cpp
+@@ -160,18 +160,22 @@ void GestureRecognizer::updateSwipeGesture(const QPointF &delta)
+ 
+     // Pick an axis for gestures so horizontal ones don't change to vertical ones without lifting fingers
+     if (m_currentSwipeAxis == Axis::None) {
+-        if (std::abs(m_currentDelta.x()) >= std::abs(m_currentDelta.y())) {
++        const qreal horizontalDelta = std::abs(m_currentDelta.x());
++        const qreal verticalDelta = std::abs(m_currentDelta.y());
++        if (horizontalDelta >= verticalDelta) {
+             swipeAxis = Axis::Horizontal;
+             direction = m_currentDelta.x() < 0 ? SwipeDirection::Left : SwipeDirection::Right;
+         } else {
+             swipeAxis = Axis::Vertical;
+             direction = m_currentDelta.y() < 0 ? SwipeDirection::Up : SwipeDirection::Down;
+         }
+-        if (std::abs(m_currentDelta.x()) >= 5 || std::abs(m_currentDelta.y()) >= 5) {
++        const qreal primaryDelta = std::max(horizontalDelta, verticalDelta);
++        const qreal secondaryDelta = std::min(horizontalDelta, verticalDelta);
++        if (primaryDelta >= 30 && primaryDelta >= secondaryDelta * 1.6) {
+             // only lock in a direction if the delta is big enough
+             // to prevent accidentally choosing the wrong direction
+             m_currentSwipeAxis = swipeAxis;
+         }
+     } else {
+         swipeAxis = m_currentSwipeAxis;
+     }
+ 
