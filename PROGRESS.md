@@ -7,7 +7,7 @@
 - Runtime/stack: Arch PKGBUILD, KWin 6.7.0, C++/Qt/KDE patchleri
 - Current architecture summary: Proje upstream KWin kaynaklarini repoya tasimaz; Arch PKGBUILD kaynak indirir, local patch uygular ve paket uretir.
 - Primary validation: `cd packaging/arch && makepkg --nobuild --skippgpcheck`; full package icin `makepkg -e --skippgpcheck`
-- Stable gesture behavior: 3 parmak yukari Overview, 3 parmak asagi Show Desktop, 3 parmak sag/sol custom action yok, 4 parmak sag/sol virtual desktop switching.
+- Stable gesture behavior: 3 parmak yukari Overview, 3 parmak asagi Minimize All, 3 parmak sag/sol custom action yok, 4 parmak sag/sol virtual desktop switching.
 
 ## Active Follow-ups
 - Alt-Tab/window switcher gesture davranisini stable patchten ayri tasarla.
@@ -22,6 +22,7 @@
 - Obsidian vault root is `docs/`; `.obsidian/` is local and ignored.
 
 ## Recent Changelog
+- 2026-06-23: **3-finger down changed to Minimize All.** Replaced Show Desktop gesture action with direct KWin minimize-all behavior.
 - 2026-06-23: **Project scaffold created.** Moved stable KWin touchpad gesture patch into a dedicated project layout with packaging, saved patches, and docs.
 
 ## Archive

@@ -5,7 +5,7 @@ KDE Plasma Wayland oturumunda KWin touchpad gesture davranisini patch tabanli ge
 ## Current stable behavior
 
 - 3 parmak yukari: Overview
-- 3 parmak asagi: Show Desktop
+- 3 parmak asagi: Minimize All
 - 3 parmak sag/sol: custom action yok
 - 4 parmak sag/sol: KWin virtual desktop switching korunur
 

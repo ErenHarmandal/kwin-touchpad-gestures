@@ -1,8 +1,6 @@
-diff --git a/src/plugins/overview/overvieweffect.cpp b/src/plugins/overview/overvieweffect.cpp
-index d9be30e..8661e99 100644
 --- a/src/plugins/overview/overvieweffect.cpp
 +++ b/src/plugins/overview/overvieweffect.cpp
-@@ -33,6 +33,7 @@ OverviewEffect::OverviewEffect()
+@@ -33,6 +33,7 @@
      , m_shutdownTimer(new QTimer(this))
  {
      auto gesture = new EffectTogglableGesture(m_overviewState);
@@ -10,25 +8,75 @@ index d9be30e..8661e99 100644
      gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 4);
      gesture->addTouchscreenSwipeGesture(SwipeDirection::Up, 3);
  
-diff --git a/src/useractions.cpp b/src/useractions.cpp
-index a77a8ac..17d1c3a 100644
 --- a/src/useractions.cpp
 +++ b/src/useractions.cpp
-@@ -980,6 +980,9 @@ void Workspace::initShortcuts()
+@@ -980,6 +980,9 @@
  
      initShortcut("Show Desktop", i18n("Peek at Desktop"),
                   Qt::META | Qt::Key_D, &Workspace::slotToggleShowDesktop, false);
-+    QAction *showDesktopTouchpadAction = new QAction(this);
-+    connect(showDesktopTouchpadAction, &QAction::triggered, this, &Workspace::slotToggleShowDesktop);
-+    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, showDesktopTouchpadAction);
++    QAction *minimizeAllTouchpadAction = new QAction(this);
++    connect(minimizeAllTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadMinimizeAll);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, minimizeAllTouchpadAction);
  
      initShortcut("Kill Window", i18n("Kill Window"), Qt::META | Qt::CTRL | Qt::Key_Escape, &Workspace::slotKillWindow, true);
  
-diff --git a/src/virtualdesktops.cpp b/src/virtualdesktops.cpp
-index a7414d2..e01e9dd 100644
+@@ -1422,6 +1425,53 @@
+     setShowingDesktop(!showingDesktop());
+ }
+ 
++void Workspace::slotTouchpadMinimizeAll()
++{
++    for (auto it = m_touchpadMinimizedWindows.begin(); it != m_touchpadMinimizedWindows.end();) {
++        if (it->isNull()) {
++            it = m_touchpadMinimizedWindows.erase(it);
++        } else {
++            ++it;
++        }
++    }
++
++    QList<Window *> relevantWindows;
++    bool minimize = false;
++    for (Window *window : stackingOrder()) {
++        if (!window->isMinimizable() || !window->isOnCurrentDesktop() || !window->isOnCurrentActivity()) {
++            continue;
++        }
++        if (!window->isMinimized()) {
++            minimize = true;
++        }
++        relevantWindows.append(window);
++    }
++
++    if (minimize) {
++        m_touchpadMinimizedWindows.clear();
++        for (Window *window : std::as_const(relevantWindows)) {
++            if (window->isMinimized()) {
++                continue;
++            }
++            window->setMinimized(true);
++            m_touchpadMinimizedWindows.append(window);
++        }
++        return;
++    }
++
++    Window *restoredWindow = nullptr;
++    for (Window *window : std::as_const(m_touchpadMinimizedWindows)) {
++        if (window) {
++            window->setMinimized(false);
++            restoredWindow = window;
++        }
++    }
++    m_touchpadMinimizedWindows.clear();
++    if (restoredWindow) {
++        activateWindow(restoredWindow);
++    }
++}
++
+ void windowToDesktop(Window *window, VirtualDesktopManager::Direction direction)
+ {
+     if (window->isDesktop() || window->isDock()) {
 --- a/src/virtualdesktops.cpp
 +++ b/src/virtualdesktops.cpp
-@@ -803,22 +803,8 @@ void VirtualDesktopManager::initShortcuts()
+@@ -803,22 +803,8 @@
              emitCurrentChanging();
          }
      };
@@ -51,11 +99,9 @@ index a7414d2..e01e9dd 100644
      input()->registerTouchscreenSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
      input()->registerTouchscreenSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
  
-diff --git a/src/gestures.cpp b/src/gestures.cpp
-index 864c8da..b1cecf3 100644
 --- a/src/gestures.cpp
 +++ b/src/gestures.cpp
-@@ -160,18 +160,22 @@ void GestureRecognizer::updateSwipeGesture(const QPointF &delta)
+@@ -160,14 +160,18 @@
  
      // Pick an axis for gestures so horizontal ones don't change to vertical ones without lifting fingers
      if (m_currentSwipeAxis == Axis::None) {
@@ -76,8 +122,29 @@ index 864c8da..b1cecf3 100644
              // only lock in a direction if the delta is big enough
              // to prevent accidentally choosing the wrong direction
              m_currentSwipeAxis = swipeAxis;
-         }
-     } else {
-         swipeAxis = m_currentSwipeAxis;
-     }
+--- a/src/workspace.h
++++ b/src/workspace.h
+@@ -23,6 +23,7 @@
+ #include <netwm_def.h>
+ // Qt
+ #include <QList>
++#include <QPointer>
+ #include <QStringList>
+ #include <QTimer>
+ // std
+@@ -470,6 +471,7 @@
+     void slotWindowToPrevScreen();
  
+     void slotToggleShowDesktop();
++    void slotTouchpadMinimizeAll();
+ 
+     void slotWindowMaximize();
+     void slotWindowMaximizeVertical();
+@@ -755,6 +757,7 @@
+     QList<QString> m_recentlyRemovedDpmsOffOutputs;
+     QTimer m_dpmsTimer;
+     std::shared_ptr<FileDescriptor> m_sleepInhibitor;
++    QList<QPointer<Window>> m_touchpadMinimizedWindows;
+ 
+ private:
+     friend Workspace *workspace();

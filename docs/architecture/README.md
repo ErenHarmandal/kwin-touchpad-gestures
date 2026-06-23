@@ -18,7 +18,8 @@ Bu proje KWin'i komple fork olarak tasimaz. Arch/CachyOS paketleme akisi kullani
 ## Stable gesture behavior
 
 - Overview effect 3 parmak yukari gesture kabul eder.
-- Workspace Show Desktop 3 parmak asagi gesture ile tetiklenir.
+- Workspace 3 parmak asagi gesture ile Minimize All davranisini tetikler.
+- Minimize All davranisi klavye kisayolu gondermez; KWin icinde uygun pencereleri dogrudan minimize eder ve gesture tarafindan minimize edilenleri tekrar geri acar.
 - KWin'in 3 parmak virtual desktop swipe kayitlari kaldirilir.
 - 4 parmak virtual desktop swipe davranisi korunur.
 - Gesture axis lock esigi yukseltilir; amac erken yanlis eksen secimini azaltmaktir.
