@@ -123,7 +123,7 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcm_kwintouchpadgestures.jso
 diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp
 --- kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp	1970-01-01 02:00:00.000000000 +0200
 +++ kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp	2026-06-24 11:45:07.972443363 +0300
-@@ -0,0 +1,301 @@
+@@ -0,0 +1,303 @@
 +/*
 +    SPDX-License-Identifier: GPL-2.0-or-later
 +*/
@@ -326,17 +326,20 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp 
 +    const KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"));
 +    const QSet<QString> overviewActions = {disabledAction(), defaultThreeFingerUp()};
 +    const QSet<QString> minimizeActions = {disabledAction(), defaultThreeFingerDown()};
-+    const QSet<QString> windowLeftActions = {disabledAction(), defaultThreeFingerLeft()};
-+    const QSet<QString> windowRightActions = {disabledAction(), defaultThreeFingerRight()};
-+    const QSet<QString> desktopLeftActions = {disabledAction(), defaultFourFingerLeft()};
-+    const QSet<QString> desktopRightActions = {disabledAction(), defaultFourFingerRight()};
++    const QSet<QString> horizontalActions = {
++        disabledAction(),
++        defaultThreeFingerLeft(),
++        defaultThreeFingerRight(),
++        defaultFourFingerLeft(),
++        defaultFourFingerRight(),
++    };
 +
 +    setThreeFingerUp(checkedAction(group, QStringLiteral("ThreeFingerUp"), defaultThreeFingerUp(), overviewActions));
 +    setThreeFingerDown(checkedAction(group, QStringLiteral("ThreeFingerDown"), defaultThreeFingerDown(), minimizeActions));
-+    setThreeFingerLeft(checkedAction(group, QStringLiteral("ThreeFingerLeft"), defaultThreeFingerLeft(), windowLeftActions));
-+    setThreeFingerRight(checkedAction(group, QStringLiteral("ThreeFingerRight"), defaultThreeFingerRight(), windowRightActions));
-+    setFourFingerLeft(checkedAction(group, QStringLiteral("FourFingerLeft"), defaultFourFingerLeft(), desktopLeftActions));
-+    setFourFingerRight(checkedAction(group, QStringLiteral("FourFingerRight"), defaultFourFingerRight(), desktopRightActions));
++    setThreeFingerLeft(checkedAction(group, QStringLiteral("ThreeFingerLeft"), defaultThreeFingerLeft(), horizontalActions));
++    setThreeFingerRight(checkedAction(group, QStringLiteral("ThreeFingerRight"), defaultThreeFingerRight(), horizontalActions));
++    setFourFingerLeft(checkedAction(group, QStringLiteral("FourFingerLeft"), defaultFourFingerLeft(), horizontalActions));
++    setFourFingerRight(checkedAction(group, QStringLiteral("FourFingerRight"), defaultFourFingerRight(), horizontalActions));
 +    setAxisLockMinimumDelta(group.readEntry("AxisLockMinimumDelta", defaultAxisLockMinimumDelta));
 +    setAxisLockDominanceRatio(group.readEntry("AxisLockDominanceRatio", defaultAxisLockDominanceRatio));
 +
@@ -520,7 +523,7 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.h kw
 diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/kcms/touchpadgestures/ui/main.qml
 --- kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml	1970-01-01 02:00:00.000000000 +0200
 +++ kwin-6.7.1/src/kcms/touchpadgestures/ui/main.qml	2026-06-24 11:45:40.823107480 +0300
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,274 @@
 +/*
 +    SPDX-License-Identifier: GPL-2.0-or-later
 +*/
@@ -534,16 +537,18 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/k
 +KCM.SimpleKCM {
 +    id: root
 +
-+    implicitWidth: Kirigami.Units.gridUnit * 48
-+    implicitHeight: Kirigami.Units.gridUnit * 34
++    implicitWidth: Kirigami.Units.gridUnit * 52
++    implicitHeight: Kirigami.Units.gridUnit * 36
 +
 +    readonly property var noAction: [{ text: i18nc("@item:inlistbox Touchpad gesture action", "Disabled"), value: "Disabled" }]
 +    readonly property var overviewActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Overview"), value: "Overview" }])
 +    readonly property var minimizeActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Minimize All Windows"), value: "MinimizeAll" }])
-+    readonly property var windowLeftActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Window"), value: "SwitchWindowPrevious" }])
-+    readonly property var windowRightActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Next Window"), value: "SwitchWindowNext" }])
-+    readonly property var desktopLeftActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Virtual Desktop"), value: "PreviousVirtualDesktop" }])
-+    readonly property var desktopRightActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Next Virtual Desktop"), value: "NextVirtualDesktop" }])
++    readonly property var horizontalActions: noAction.concat([
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Window"), value: "SwitchWindowPrevious" },
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Next Window"), value: "SwitchWindowNext" },
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Virtual Desktop"), value: "PreviousVirtualDesktop" },
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Next Virtual Desktop"), value: "NextVirtualDesktop" }
++    ])
 +
 +    function indexOfAction(model, value) {
 +        for (let i = 0; i < model.length; ++i) {
@@ -554,8 +559,209 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/k
 +        return 0;
 +    }
 +
++    function isEnabled(action) {
++        return action !== "Disabled";
++    }
++
++    component DirectionIndicator: Rectangle {
++        id: indicator
++
++        property string iconName
++        property bool active: false
++
++        width: Kirigami.Units.gridUnit * 2.2
++        height: width
++        radius: width / 2
++        color: active ? Kirigami.Theme.highlightColor : Kirigami.Theme.backgroundColor
++        border.color: active ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
++        border.width: 1
++        opacity: active ? 1 : 0.55
++
++        Kirigami.Icon {
++            anchors.centerIn: parent
++            width: Kirigami.Units.iconSizes.smallMedium
++            height: width
++            source: indicator.iconName
++            color: indicator.active ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
++        }
++    }
++
++    component TouchpadPreview: Item {
++        id: preview
++
++        property string upAction: "Disabled"
++        property string downAction: "Disabled"
++        property string leftAction: "Disabled"
++        property string rightAction: "Disabled"
++
++        implicitWidth: Kirigami.Units.gridUnit * 12
++        implicitHeight: Kirigami.Units.gridUnit * 10
++
++        Rectangle {
++            id: touchpadShape
++
++            anchors.centerIn: parent
++            width: Kirigami.Units.gridUnit * 7.5
++            height: Kirigami.Units.gridUnit * 5
++            radius: Kirigami.Units.cornerRadius
++            color: Kirigami.Theme.alternateBackgroundColor
++            border.color: Kirigami.Theme.disabledTextColor
++            border.width: 1
++
++            Rectangle {
++                anchors.horizontalCenter: parent.horizontalCenter
++                anchors.bottom: parent.bottom
++                anchors.bottomMargin: Kirigami.Units.smallSpacing
++                width: parent.width * 0.36
++                height: 1
++                color: Kirigami.Theme.disabledTextColor
++                opacity: 0.7
++            }
++        }
++
++        DirectionIndicator {
++            anchors.horizontalCenter: touchpadShape.horizontalCenter
++            anchors.bottom: touchpadShape.top
++            anchors.bottomMargin: Kirigami.Units.smallSpacing
++            iconName: "go-up"
++            active: root.isEnabled(preview.upAction)
++        }
++
++        DirectionIndicator {
++            anchors.horizontalCenter: touchpadShape.horizontalCenter
++            anchors.top: touchpadShape.bottom
++            anchors.topMargin: Kirigami.Units.smallSpacing
++            iconName: "go-down"
++            active: root.isEnabled(preview.downAction)
++        }
++
++        DirectionIndicator {
++            anchors.verticalCenter: touchpadShape.verticalCenter
++            anchors.right: touchpadShape.left
++            anchors.rightMargin: Kirigami.Units.smallSpacing
++            iconName: "go-previous"
++            active: root.isEnabled(preview.leftAction)
++        }
++
++        DirectionIndicator {
++            anchors.verticalCenter: touchpadShape.verticalCenter
++            anchors.left: touchpadShape.right
++            anchors.leftMargin: Kirigami.Units.smallSpacing
++            iconName: "go-next"
++            active: root.isEnabled(preview.rightAction)
++        }
++    }
++
++    component ActionSelector: QQC2.ComboBox {
++        id: selector
++
++        property var actionModel: []
++        property string actionValue: "Disabled"
++        signal actionPicked(string value)
++
++        Layout.fillWidth: true
++        textRole: "text"
++        model: actionModel
++        currentIndex: root.indexOfAction(actionModel, actionValue)
++        onActivated: function(index) { actionPicked(actionModel[index].value) }
++    }
++
++    component GestureGroup: QQC2.GroupBox {
++        id: group
++
++        property string upAction: "Disabled"
++        property string downAction: "Disabled"
++        property string leftAction: "Disabled"
++        property string rightAction: "Disabled"
++        property var upModel: root.noAction
++        property var downModel: root.noAction
++        property var leftModel: root.noAction
++        property var rightModel: root.noAction
++        property bool showVerticalActions: true
++        signal upPicked(string value)
++        signal downPicked(string value)
++        signal leftPicked(string value)
++        signal rightPicked(string value)
++
++        Layout.fillWidth: true
++
++        RowLayout {
++            anchors.fill: parent
++            spacing: Kirigami.Units.largeSpacing
++
++            TouchpadPreview {
++                Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
++                upAction: group.showVerticalActions ? group.upAction : "Disabled"
++                downAction: group.showVerticalActions ? group.downAction : "Disabled"
++                leftAction: group.leftAction
++                rightAction: group.rightAction
++            }
++
++            Kirigami.FormLayout {
++                Layout.fillWidth: true
++
++                ActionSelector {
++                    visible: group.showVerticalActions
++                    Kirigami.FormData.label: i18nc("@label:listbox", "Swipe up:")
++                    actionModel: group.upModel
++                    actionValue: group.upAction
++                    onActionPicked: function(value) { group.upPicked(value) }
++                }
++
++                ActionSelector {
++                    visible: group.showVerticalActions
++                    Kirigami.FormData.label: i18nc("@label:listbox", "Swipe down:")
++                    actionModel: group.downModel
++                    actionValue: group.downAction
++                    onActionPicked: function(value) { group.downPicked(value) }
++                }
++
++                ActionSelector {
++                    Kirigami.FormData.label: i18nc("@label:listbox", "Swipe left:")
++                    actionModel: group.leftModel
++                    actionValue: group.leftAction
++                    onActionPicked: function(value) { group.leftPicked(value) }
++                }
++
++                ActionSelector {
++                    Kirigami.FormData.label: i18nc("@label:listbox", "Swipe right:")
++                    actionModel: group.rightModel
++                    actionValue: group.rightAction
++                    onActionPicked: function(value) { group.rightPicked(value) }
++                }
++            }
++        }
++    }
++
 +    ColumnLayout {
 +        spacing: Kirigami.Units.largeSpacing
++
++        GestureGroup {
++            title: i18nc("@title:group", "Three-Finger Gestures")
++            upModel: root.overviewActions
++            downModel: root.minimizeActions
++            leftModel: root.horizontalActions
++            rightModel: root.horizontalActions
++            upAction: kcm.threeFingerUp
++            downAction: kcm.threeFingerDown
++            leftAction: kcm.threeFingerLeft
++            rightAction: kcm.threeFingerRight
++            onUpPicked: function(value) { kcm.threeFingerUp = value }
++            onDownPicked: function(value) { kcm.threeFingerDown = value }
++            onLeftPicked: function(value) { kcm.threeFingerLeft = value }
++            onRightPicked: function(value) { kcm.threeFingerRight = value }
++        }
++
++        GestureGroup {
++            title: i18nc("@title:group", "Four-Finger Gestures")
++            showVerticalActions: false
++            leftModel: root.horizontalActions
++            rightModel: root.horizontalActions
++            leftAction: kcm.fourFingerLeft
++            rightAction: kcm.fourFingerRight
++            onLeftPicked: function(value) { kcm.fourFingerLeft = value }
++            onRightPicked: function(value) { kcm.fourFingerRight = value }
++        }
 +
 +        Kirigami.InlineMessage {
 +            Layout.fillWidth: true
@@ -564,91 +770,30 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/k
 +            visible: true
 +        }
 +
-+        Kirigami.FormLayout {
++        QQC2.GroupBox {
 +            Layout.fillWidth: true
++            title: i18nc("@title:group", "Advanced")
 +
-+            Kirigami.Heading {
-+                Kirigami.FormData.isSection: true
-+                text: i18nc("@title:group", "Three-Finger Gestures")
-+                level: 2
-+            }
++            Kirigami.FormLayout {
++                anchors.fill: parent
 +
-+            QQC2.ComboBox {
-+                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe up:")
-+                textRole: "text"
-+                model: root.overviewActions
-+                currentIndex: root.indexOfAction(root.overviewActions, kcm.threeFingerUp)
-+                onActivated: function(index) { kcm.threeFingerUp = root.overviewActions[index].value }
-+            }
++                QQC2.SpinBox {
++                    Kirigami.FormData.label: i18nc("@label:spinbox", "Axis lock distance:")
++                    from: 5
++                    to: 120
++                    value: Math.round(kcm.axisLockMinimumDelta)
++                    onValueModified: kcm.axisLockMinimumDelta = value
++                }
 +
-+            QQC2.ComboBox {
-+                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe down:")
-+                textRole: "text"
-+                model: root.minimizeActions
-+                currentIndex: root.indexOfAction(root.minimizeActions, kcm.threeFingerDown)
-+                onActivated: function(index) { kcm.threeFingerDown = root.minimizeActions[index].value }
-+            }
-+
-+            QQC2.ComboBox {
-+                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe left:")
-+                textRole: "text"
-+                model: root.windowLeftActions
-+                currentIndex: root.indexOfAction(root.windowLeftActions, kcm.threeFingerLeft)
-+                onActivated: function(index) { kcm.threeFingerLeft = root.windowLeftActions[index].value }
-+            }
-+
-+            QQC2.ComboBox {
-+                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe right:")
-+                textRole: "text"
-+                model: root.windowRightActions
-+                currentIndex: root.indexOfAction(root.windowRightActions, kcm.threeFingerRight)
-+                onActivated: function(index) { kcm.threeFingerRight = root.windowRightActions[index].value }
-+            }
-+
-+            Kirigami.Heading {
-+                Kirigami.FormData.isSection: true
-+                text: i18nc("@title:group", "Four-Finger Gestures")
-+                level: 2
-+            }
-+
-+            QQC2.ComboBox {
-+                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe left:")
-+                textRole: "text"
-+                model: root.desktopLeftActions
-+                currentIndex: root.indexOfAction(root.desktopLeftActions, kcm.fourFingerLeft)
-+                onActivated: function(index) { kcm.fourFingerLeft = root.desktopLeftActions[index].value }
-+            }
-+
-+            QQC2.ComboBox {
-+                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe right:")
-+                textRole: "text"
-+                model: root.desktopRightActions
-+                currentIndex: root.indexOfAction(root.desktopRightActions, kcm.fourFingerRight)
-+                onActivated: function(index) { kcm.fourFingerRight = root.desktopRightActions[index].value }
-+            }
-+
-+            Kirigami.Heading {
-+                Kirigami.FormData.isSection: true
-+                text: i18nc("@title:group", "Sensitivity")
-+                level: 2
-+            }
-+
-+            QQC2.SpinBox {
-+                Kirigami.FormData.label: i18nc("@label:spinbox", "Axis lock distance:")
-+                from: 5
-+                to: 120
-+                value: Math.round(kcm.axisLockMinimumDelta)
-+                onValueModified: kcm.axisLockMinimumDelta = value
-+            }
-+
-+            QQC2.SpinBox {
-+                Kirigami.FormData.label: i18nc("@label:spinbox", "Axis dominance:")
-+                from: 10
-+                to: 40
-+                value: Math.round(kcm.axisLockDominanceRatio * 10)
-+                textFromValue: function(value) { return (value / 10).toFixed(1) }
-+                valueFromText: function(text) { return Number.fromLocaleString(Qt.locale(), text) * 10 }
-+                onValueModified: kcm.axisLockDominanceRatio = value / 10
++                QQC2.SpinBox {
++                    Kirigami.FormData.label: i18nc("@label:spinbox", "Axis dominance:")
++                    from: 10
++                    to: 40
++                    value: Math.round(kcm.axisLockDominanceRatio * 10)
++                    textFromValue: function(value) { return (value / 10).toFixed(1) }
++                    valueFromText: function(text) { return Number.fromLocaleString(Qt.locale(), text) * 10 }
++                    onValueModified: kcm.axisLockDominanceRatio = value / 10
++                }
 +            }
 +        }
 +    }

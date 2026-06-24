@@ -25,14 +25,15 @@ Bu proje KWin'i komple fork olarak tasimaz. Arch/CachyOS paketleme akisi kullani
 - Overview effect 3 parmak yukari gesture kabul eder.
 - Workspace 3 parmak asagi gesture ile Minimize All davranisini tetikler.
 - Minimize All davranisi klavye kisayolu gondermez; KWin icinde uygun pencereleri dogrudan minimize eder ve gesture tarafindan minimize edilenleri tekrar geri acar.
-- Workspace 3 parmak sag/sol gesture ile TabBox overlay'i acmadan mevcut masaustu/aktivitedeki uygun pencereler arasinda dogrudan gecis yapar.
+- Workspace 3/4 parmak sag/sol gesture'lar KCM'den pencere gecisi veya virtual desktop gecisi aksiyonlarina atanabilir.
+- Default olarak 3 parmak sag/sol TabBox overlay'i acmadan mevcut masaustu/aktivitedeki uygun pencereler arasinda dogrudan gecis yapar.
 - Touchpad pencere gecisi minimize, special, keep-above ve keep-below pencereleri aday listesinden cikarir.
 - Art arda sag/sol swipe'larda KWin focus chain'i yeniden siralandigi icin kisa omurlu gesture cycle listesi kullanilir.
-- KWin'in 3 parmak virtual desktop swipe kayitlari kaldirilir.
-- 4 parmak virtual desktop swipe davranisi korunur.
+- KWin'in upstream 3 parmak virtual desktop swipe kayitlari kaldirilir; 3 parmak virtual desktop davranisi yalnizca KCM'de secilirse yeniden kaydedilir.
+- Default olarak 4 parmak sag/sol virtual desktop swipe davranisi korunur.
 - Gesture axis lock esigi yukseltilir; amac erken yanlis eksen secimini azaltmaktir.
 - Discrete gesture action'lari cancel eventinde calismaz. Cancel eventinin QAction tetiklemesi sadece Overview/virtual desktop gibi progress callback kullanan realtime gesture'larda korunur.
-- System Settings icindeki Touchpad Gestures KCM'i sabit guvenli secenekleri yazar; Apply butonu KCM property snapshot'i ile takip edilir. Runtime re-register yoktur, gesture davranis degisiklikleri KWin/Plasma restart sonrasi uygulanir.
+- System Settings icindeki Touchpad Gestures KCM'i desteklenen guvenli secenekleri yazar; 3/4 parmak gesture'lari temsili touchpad onizlemesiyle gruplanir. Apply butonu KCM property snapshot'i ile takip edilir. Runtime re-register veya canli gesture izleme yoktur; gesture davranis degisiklikleri KWin/Plasma restart sonrasi uygulanir.
 
 ## Related
 
