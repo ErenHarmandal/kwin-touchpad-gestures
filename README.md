@@ -6,7 +6,7 @@ KDE Plasma Wayland oturumunda KWin touchpad gesture davranisini patch tabanli ge
 
 - 3 parmak yukari: Overview
 - 3 parmak asagi: Minimize All
-- 3 parmak sag/sol: custom action yok
+- 3 parmak sag/sol: TabBox overlay'i acmadan direct window switching
 - 4 parmak sag/sol: KWin virtual desktop switching korunur
 
 ## Layout

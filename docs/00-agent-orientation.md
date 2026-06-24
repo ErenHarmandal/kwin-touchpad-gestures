@@ -7,6 +7,7 @@ Bu dosya, projeyi ilk kez acan coding agent icin okuma rotasidir. Goreve gore il
 - Genel docs haritasi: [[README]]
 - Dokumantasyon kurallari: [[standards/agent-documentation-rules]]
 - Mimari notlar: [[architecture/README]]
+- Roadmap: [[roadmap]]
 - Karar kayitlari: [[decisions/README]]
 - Tarihce arsivi: [[history/progress-archive]]
 

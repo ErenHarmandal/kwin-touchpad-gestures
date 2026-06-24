@@ -1,0 +1,283 @@
+diff -urN a/src/gestures.cpp b/src/gestures.cpp
+--- a/src/gestures.cpp	2026-06-23 11:12:31.000000000 +0300
++++ b/src/gestures.cpp	2026-06-23 23:54:54.949793412 +0300
+@@ -160,14 +160,18 @@
+ 
+     // Pick an axis for gestures so horizontal ones don't change to vertical ones without lifting fingers
+     if (m_currentSwipeAxis == Axis::None) {
+-        if (std::abs(m_currentDelta.x()) >= std::abs(m_currentDelta.y())) {
++        const qreal horizontalDelta = std::abs(m_currentDelta.x());
++        const qreal verticalDelta = std::abs(m_currentDelta.y());
++        if (horizontalDelta >= verticalDelta) {
+             swipeAxis = Axis::Horizontal;
+             direction = m_currentDelta.x() < 0 ? SwipeDirection::Left : SwipeDirection::Right;
+         } else {
+             swipeAxis = Axis::Vertical;
+             direction = m_currentDelta.y() < 0 ? SwipeDirection::Up : SwipeDirection::Down;
+         }
+-        if (std::abs(m_currentDelta.x()) >= 5 || std::abs(m_currentDelta.y()) >= 5) {
++        const qreal primaryDelta = std::max(horizontalDelta, verticalDelta);
++        const qreal secondaryDelta = std::min(horizontalDelta, verticalDelta);
++        if (primaryDelta >= 30 && primaryDelta >= secondaryDelta * 1.6) {
+             // only lock in a direction if the delta is big enough
+             // to prevent accidentally choosing the wrong direction
+             m_currentSwipeAxis = swipeAxis;
+diff -urN a/src/globalshortcuts.cpp b/src/globalshortcuts.cpp
+--- a/src/globalshortcuts.cpp	2026-06-23 11:12:31.000000000 +0300
++++ b/src/globalshortcuts.cpp	2026-06-24 10:27:52.561686146 +0300
+@@ -37,16 +37,16 @@
+         m_swipeGesture = std::make_unique<SwipeGesture>(swipeGesture->fingerCount);
+         m_swipeGesture->setDirection(swipeGesture->direction);
+         QObject::connect(m_swipeGesture.get(), &SwipeGesture::triggered, m_action, &QAction::trigger, Qt::QueuedConnection);
+-        QObject::connect(m_swipeGesture.get(), &SwipeGesture::cancelled, m_action, &QAction::trigger, Qt::QueuedConnection);
+         if (swipeGesture->progressCallback) {
++            QObject::connect(m_swipeGesture.get(), &SwipeGesture::cancelled, m_action, &QAction::trigger, Qt::QueuedConnection);
+             QObject::connect(m_swipeGesture.get(), &SwipeGesture::progress, m_swipeGesture.get(), swipeGesture->progressCallback);
+         }
+     } else if (auto pinchGesture = std::get_if<RealtimeFeedbackPinchShortcut>(&sc)) {
+         m_pinchGesture = std::make_unique<PinchGesture>(pinchGesture->fingerCount);
+         m_pinchGesture->setDirection(pinchGesture->direction);
+         QObject::connect(m_pinchGesture.get(), &PinchGesture::triggered, m_action, &QAction::trigger, Qt::QueuedConnection);
+-        QObject::connect(m_pinchGesture.get(), &PinchGesture::cancelled, m_action, &QAction::trigger, Qt::QueuedConnection);
+         if (pinchGesture->scaleCallback) {
++            QObject::connect(m_pinchGesture.get(), &PinchGesture::cancelled, m_action, &QAction::trigger, Qt::QueuedConnection);
+             QObject::connect(m_pinchGesture.get(), &PinchGesture::progress, m_pinchGesture.get(), pinchGesture->scaleCallback);
+         }
+     }
+diff -urN a/src/plugins/overview/overvieweffect.cpp b/src/plugins/overview/overvieweffect.cpp
+--- a/src/plugins/overview/overvieweffect.cpp	2026-06-23 11:12:31.000000000 +0300
++++ b/src/plugins/overview/overvieweffect.cpp	2026-06-23 23:54:54.950005002 +0300
+@@ -33,6 +33,7 @@
+     , m_shutdownTimer(new QTimer(this))
+ {
+     auto gesture = new EffectTogglableGesture(m_overviewState);
++    gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 3);
+     gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 4);
+     gesture->addTouchscreenSwipeGesture(SwipeDirection::Up, 3);
+ 
+diff -urN a/src/useractions.cpp b/src/useractions.cpp
+--- a/src/useractions.cpp	2026-06-23 11:12:31.000000000 +0300
++++ b/src/useractions.cpp	2026-06-24 00:05:50.701134983 +0300
+@@ -27,6 +27,7 @@
+ 
+ #include "core/output.h"
+ #include "cursor.h"
++#include "focuschain.h"
+ #include "input.h"
+ #include "options.h"
+ #include "pointer_input.h"
+@@ -980,6 +981,15 @@
+ 
+     initShortcut("Show Desktop", i18n("Peek at Desktop"),
+                  Qt::META | Qt::Key_D, &Workspace::slotToggleShowDesktop, false);
++    QAction *minimizeAllTouchpadAction = new QAction(this);
++    connect(minimizeAllTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadMinimizeAll);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, minimizeAllTouchpadAction);
++    QAction *switchWindowForwardTouchpadAction = new QAction(this);
++    connect(switchWindowForwardTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadSwitchWindowForward);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, switchWindowForwardTouchpadAction);
++    QAction *switchWindowBackwardTouchpadAction = new QAction(this);
++    connect(switchWindowBackwardTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadSwitchWindowBackward);
++    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, switchWindowBackwardTouchpadAction);
+ 
+     initShortcut("Kill Window", i18n("Kill Window"), Qt::META | Qt::CTRL | Qt::Key_Escape, &Workspace::slotKillWindow, true);
+ 
+@@ -1422,6 +1432,128 @@
+     setShowingDesktop(!showingDesktop());
+ }
+ 
++void Workspace::slotTouchpadMinimizeAll()
++{
++    for (auto it = m_touchpadMinimizedWindows.begin(); it != m_touchpadMinimizedWindows.end();) {
++        if (it->isNull()) {
++            it = m_touchpadMinimizedWindows.erase(it);
++        } else {
++            ++it;
++        }
++    }
++
++    QList<Window *> relevantWindows;
++    bool minimize = false;
++    for (Window *window : stackingOrder()) {
++        if (!window->isMinimizable() || !window->isOnCurrentDesktop() || !window->isOnCurrentActivity()) {
++            continue;
++        }
++        if (!window->isMinimized()) {
++            minimize = true;
++        }
++        relevantWindows.append(window);
++    }
++
++    if (minimize) {
++        m_touchpadMinimizedWindows.clear();
++        for (Window *window : std::as_const(relevantWindows)) {
++            if (window->isMinimized()) {
++                continue;
++            }
++            window->setMinimized(true);
++            m_touchpadMinimizedWindows.append(window);
++        }
++        return;
++    }
++
++    Window *restoredWindow = nullptr;
++    for (Window *window : std::as_const(m_touchpadMinimizedWindows)) {
++        if (window) {
++            window->setMinimized(false);
++            restoredWindow = window;
++        }
++    }
++    m_touchpadMinimizedWindows.clear();
++    if (restoredWindow) {
++        activateWindow(restoredWindow);
++    }
++}
++
++void Workspace::slotTouchpadSwitchWindowForward()
++{
++    touchpadSwitchWindow(true);
++}
++
++void Workspace::slotTouchpadSwitchWindowBackward()
++{
++    touchpadSwitchWindow(false);
++}
++
++bool Workspace::isTouchpadWindowSwitchCandidate(Window *window) const
++{
++    return window && !window->isDeleted() && window->isClient() && window->isShown() && window->wantsTabFocus()
++        && window->isOnCurrentDesktop() && window->isOnCurrentActivity() && !window->isMinimized()
++        && !window->isSpecialWindow() && !window->keepAbove() && !window->keepBelow();
++}
++
++void Workspace::rebuildTouchpadWindowSwitchChain()
++{
++    m_touchpadWindowSwitchChain.clear();
++    m_touchpadWindowSwitchIndex = -1;
++
++    Window *start = isTouchpadWindowSwitchCandidate(m_activeWindow) ? m_activeWindow : focusChain()->firstMostRecentlyUsed();
++    if (!start) {
++        return;
++    }
++
++    Window *window = start;
++    do {
++        if (isTouchpadWindowSwitchCandidate(window) && !m_touchpadWindowSwitchChain.contains(window)) {
++            m_touchpadWindowSwitchChain.append(window);
++            if (window == m_activeWindow) {
++                m_touchpadWindowSwitchIndex = m_touchpadWindowSwitchChain.size() - 1;
++            }
++        }
++        window = focusChain()->nextMostRecentlyUsed(window);
++    } while (window && window != start && !m_touchpadWindowSwitchChain.contains(window));
++
++    if (m_touchpadWindowSwitchIndex == -1 && !m_touchpadWindowSwitchChain.isEmpty()) {
++        m_touchpadWindowSwitchIndex = 0;
++    }
++}
++
++void Workspace::touchpadSwitchWindow(bool forward)
++{
++    if (!m_touchpadWindowSwitchTimer.isValid() || m_touchpadWindowSwitchTimer.elapsed() > 1200) {
++        rebuildTouchpadWindowSwitchChain();
++    } else {
++        for (auto it = m_touchpadWindowSwitchChain.begin(); it != m_touchpadWindowSwitchChain.end();) {
++            if (it->isNull() || !isTouchpadWindowSwitchCandidate(*it)) {
++                it = m_touchpadWindowSwitchChain.erase(it);
++            } else {
++                ++it;
++            }
++        }
++    }
++
++    if (m_touchpadWindowSwitchChain.size() < 2) {
++        m_touchpadWindowSwitchTimer.invalidate();
++        return;
++    }
++
++    if (m_touchpadWindowSwitchIndex < 0 || m_touchpadWindowSwitchIndex >= m_touchpadWindowSwitchChain.size()) {
++        m_touchpadWindowSwitchIndex = 0;
++    }
++
++    const int step = forward ? 1 : -1;
++    m_touchpadWindowSwitchIndex = (m_touchpadWindowSwitchIndex + step + m_touchpadWindowSwitchChain.size()) % m_touchpadWindowSwitchChain.size();
++    Window *window = m_touchpadWindowSwitchChain.at(m_touchpadWindowSwitchIndex);
++    if (window) {
++        activateWindow(window);
++        m_touchpadWindowSwitchTimer.restart();
++    }
++}
++
+ void windowToDesktop(Window *window, VirtualDesktopManager::Direction direction)
+ {
+     if (window->isDesktop() || window->isDock()) {
+diff -urN a/src/virtualdesktops.cpp b/src/virtualdesktops.cpp
+--- a/src/virtualdesktops.cpp	2026-06-23 11:12:31.000000000 +0300
++++ b/src/virtualdesktops.cpp	2026-06-23 23:54:54.950509232 +0300
+@@ -803,22 +803,8 @@
+             emitCurrentChanging();
+         }
+     };
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
+     input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 4, m_swipeGestureReleasedX.get(), left);
+     input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 4, m_swipeGestureReleasedX.get(), right);
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, m_swipeGestureReleasedY.get(), [this, emitCurrentChanging](qreal cb) {
+-        if (grid().height() > 1) {
+-            m_currentDesktopOffset.setY(-cb);
+-            emitCurrentChanging();
+-        }
+-    });
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Up, 3, m_swipeGestureReleasedY.get(), [this, emitCurrentChanging](qreal cb) {
+-        if (grid().height() > 1) {
+-            m_currentDesktopOffset.setY(cb);
+-            emitCurrentChanging();
+-        }
+-    });
+     input()->registerTouchscreenSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
+     input()->registerTouchscreenSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
+ 
+diff -urN a/src/workspace.h b/src/workspace.h
+--- a/src/workspace.h	2026-06-23 11:12:31.000000000 +0300
++++ b/src/workspace.h	2026-06-23 23:54:54.950718328 +0300
+@@ -22,7 +22,9 @@
+ // KF
+ #include <netwm_def.h>
+ // Qt
++#include <QElapsedTimer>
+ #include <QList>
++#include <QPointer>
+ #include <QStringList>
+ #include <QTimer>
+ // std
+@@ -470,6 +472,9 @@
+     void slotWindowToPrevScreen();
+ 
+     void slotToggleShowDesktop();
++    void slotTouchpadMinimizeAll();
++    void slotTouchpadSwitchWindowForward();
++    void slotTouchpadSwitchWindowBackward();
+ 
+     void slotWindowMaximize();
+     void slotWindowMaximizeVertical();
+@@ -582,6 +587,9 @@
+     template<typename T, typename Slot>
+     void initShortcut(const QString &actionName, const QString &description, const QKeySequence &shortcut, T *receiver, Slot slot, bool autoRepeat);
+     void setupWindowShortcut(Window *window);
++    void touchpadSwitchWindow(bool forward);
++    bool isTouchpadWindowSwitchCandidate(Window *window) const;
++    void rebuildTouchpadWindowSwitchChain();
+     bool switchWindow(Window *window, Direction direction, QPoint curPos, VirtualDesktop *desktop);
+     void desktopResized(const QHash<Window *, LogicalOutput *> &oldOutputs);
+ 
+@@ -755,6 +763,10 @@
+     QList<QString> m_recentlyRemovedDpmsOffOutputs;
+     QTimer m_dpmsTimer;
+     std::shared_ptr<FileDescriptor> m_sleepInhibitor;
++    QList<QPointer<Window>> m_touchpadMinimizedWindows;
++    QList<QPointer<Window>> m_touchpadWindowSwitchChain;
++    int m_touchpadWindowSwitchIndex = -1;
++    QElapsedTimer m_touchpadWindowSwitchTimer;
+ 
+ private:
+     friend Workspace *workspace();

@@ -3,7 +3,7 @@
 ## Project Identity
 - Project name: `kwin-touchpad-gestures`
 - Purpose: KDE Wayland/KWin touchpad gesture davranisini patch tabanli gelistirmek ve Arch/CachyOS paketi olarak kurmak.
-- Primary stack/runtime: Arch PKGBUILD, KWin 6.7.0, C++/Qt/KDE patchleri
+- Primary stack/runtime: Arch PKGBUILD, KWin 6.7.1, C++/Qt/KDE patchleri
 - Owner/context: erenh local CachyOS/KDE Wayland setup
 
 ## Must-follow constraints
@@ -34,5 +34,5 @@
 - Source root: `packaging/arch`
 - Main entrypoint: `packaging/arch/PKGBUILD`
 - Active KWin patch: `packaging/arch/kwin-touchpad-gestures.patch`
-- Saved stable patch: `patches/stable/kwin-touchpad-gestures-vertical-only-stable.patch`
+- Saved stable patch: `patches/stable/kwin-touchpad-gestures-6.7.1-stable.patch`
 - Saved experimental patch: `patches/experimental/kwin-touchpad-gestures-alt-tab-experimental.patch`

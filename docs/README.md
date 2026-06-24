@@ -10,6 +10,7 @@ Obsidian kullanirken vault kokunu repo icindeki `docs/` klasoru olarak ac.
 2. [[standards/agent-documentation-rules]] ile dokumantasyon kurallarini oku.
 3. [[architecture/README]] ile sistemin nasil calistigini oku.
 4. [[decisions/README]] ile kalici karar kayitlarini oku.
+5. [[roadmap]] ile fazlari ve siradaki urun yonunu oku.
 
 ## Agent kullanimi
 
@@ -23,5 +24,6 @@ Obsidian kullanirken vault kokunu repo icindeki `docs/` klasoru olarak ac.
 - [[00-agent-orientation]]
 - [[standards/agent-documentation-rules]]
 - [[architecture/README]]
+- [[roadmap]]
 - [[decisions/README]]
 - [[history/README]]
