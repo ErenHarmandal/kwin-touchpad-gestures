@@ -16,12 +16,12 @@ Bu roadmap, gesture patchinin once stabil davranisa, sonra daha tasinabilir ve y
 ## Faz 3: Update dayanimi ve ayrisma
 
 - KWin sistem guncellemeleri patchli paketi ezdigi icin bu durumu otomatik yakalayan veya patchi daha ayri bir katmanda tutan secenekleri arastir.
-- Faz 1'de otomatik cozum yoktur; KWin surumu degisince patch yeni kaynak surumune manuel rebase edilir.
+- Ilk adim olarak paket build/status scriptleri kullanilir; KWin surumu degisince patch yeni kaynak surumune manuel rebase edilir.
 
 ## Faz 4: GUI configuration
 
-- Core gesture davranislari yeterince stabil olduktan sonra kullanici tarafindan ayarlanabilir secenekler icin GUI tasarimini baslat.
-- GUI, KWin patchinin sinirlarini gizlememeli; sadece desteklenen davranislari guvenli sekilde acip kapatabilmeli.
+- System Settings icinde Touchpad Gestures KCM'i bulunur.
+- GUI, KWin patchinin sinirlarini gizlemez; sadece desteklenen davranislari guvenli sekilde acip kapatir ve restart gerektigini belirtir.
 
 ## Faz 5: Packaging and rollback
 

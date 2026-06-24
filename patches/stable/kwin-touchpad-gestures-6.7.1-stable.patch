@@ -1,7 +1,42 @@
-diff -urN a/src/gestures.cpp b/src/gestures.cpp
---- a/src/gestures.cpp	2026-06-23 11:12:31.000000000 +0300
-+++ b/src/gestures.cpp	2026-06-23 23:54:54.949793412 +0300
-@@ -160,14 +160,18 @@
+diff -ruN kwin-6.7.1.orig/src/gestures.cpp kwin-6.7.1/src/gestures.cpp
+--- kwin-6.7.1.orig/src/gestures.cpp	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/gestures.cpp	2026-06-24 11:01:30.193386465 +0300
+@@ -10,12 +10,34 @@
+ 
+ #include <QDebug>
+ 
++#include <KConfigGroup>
++#include <KSharedConfig>
++
+ #include <cmath>
+ #include <functional>
+ 
+ namespace KWin
+ {
+ 
++namespace
++{
++
++qreal touchpadAxisLockMinimumDelta()
++{
++    static const qreal value = KConfigGroup(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"))
++                                   .readEntry("AxisLockMinimumDelta", 30.0);
++    return value;
++}
++
++qreal touchpadAxisLockDominanceRatio()
++{
++    static const qreal value = KConfigGroup(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"))
++                                   .readEntry("AxisLockDominanceRatio", 1.6);
++    return value;
++}
++
++}
++
+ Gesture::Gesture()
+ {
+ }
+@@ -160,14 +182,18 @@
  
      // Pick an axis for gestures so horizontal ones don't change to vertical ones without lifting fingers
      if (m_currentSwipeAxis == Axis::None) {
@@ -18,13 +53,13 @@ diff -urN a/src/gestures.cpp b/src/gestures.cpp
 -        if (std::abs(m_currentDelta.x()) >= 5 || std::abs(m_currentDelta.y()) >= 5) {
 +        const qreal primaryDelta = std::max(horizontalDelta, verticalDelta);
 +        const qreal secondaryDelta = std::min(horizontalDelta, verticalDelta);
-+        if (primaryDelta >= 30 && primaryDelta >= secondaryDelta * 1.6) {
++        if (primaryDelta >= touchpadAxisLockMinimumDelta() && primaryDelta >= secondaryDelta * touchpadAxisLockDominanceRatio()) {
              // only lock in a direction if the delta is big enough
              // to prevent accidentally choosing the wrong direction
              m_currentSwipeAxis = swipeAxis;
-diff -urN a/src/globalshortcuts.cpp b/src/globalshortcuts.cpp
---- a/src/globalshortcuts.cpp	2026-06-23 11:12:31.000000000 +0300
-+++ b/src/globalshortcuts.cpp	2026-06-24 10:27:52.561686146 +0300
+diff -ruN kwin-6.7.1.orig/src/globalshortcuts.cpp kwin-6.7.1/src/globalshortcuts.cpp
+--- kwin-6.7.1.orig/src/globalshortcuts.cpp	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/globalshortcuts.cpp	2026-06-24 10:27:52.561686146 +0300
 @@ -37,16 +37,16 @@
          m_swipeGesture = std::make_unique<SwipeGesture>(swipeGesture->fingerCount);
          m_swipeGesture->setDirection(swipeGesture->direction);
@@ -44,20 +79,638 @@ diff -urN a/src/globalshortcuts.cpp b/src/globalshortcuts.cpp
              QObject::connect(m_pinchGesture.get(), &PinchGesture::progress, m_pinchGesture.get(), pinchGesture->scaleCallback);
          }
      }
-diff -urN a/src/plugins/overview/overvieweffect.cpp b/src/plugins/overview/overvieweffect.cpp
---- a/src/plugins/overview/overvieweffect.cpp	2026-06-23 11:12:31.000000000 +0300
-+++ b/src/plugins/overview/overvieweffect.cpp	2026-06-23 23:54:54.950005002 +0300
-@@ -33,6 +33,7 @@
+diff -ruN kwin-6.7.1.orig/src/kcms/CMakeLists.txt kwin-6.7.1/src/kcms/CMakeLists.txt
+--- kwin-6.7.1.orig/src/kcms/CMakeLists.txt	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/kcms/CMakeLists.txt	2026-06-24 11:03:04.338731332 +0300
+@@ -12,6 +12,7 @@
+ add_subdirectory(effects)
+ add_subdirectory(virtualkeyboard)
+ add_subdirectory(xwayland)
++add_subdirectory(touchpadgestures)
+ 
+ if (KWIN_BUILD_TABBOX)
+     add_subdirectory(tabbox)
+diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/CMakeLists.txt kwin-6.7.1/src/kcms/touchpadgestures/CMakeLists.txt
+--- kwin-6.7.1.orig/src/kcms/touchpadgestures/CMakeLists.txt	1970-01-01 02:00:00.000000000 +0200
++++ kwin-6.7.1/src/kcms/touchpadgestures/CMakeLists.txt	2026-06-24 11:45:52.432010860 +0300
+@@ -0,0 +1,10 @@
++add_definitions(-DTRANSLATION_DOMAIN=\"kcm_kwintouchpadgestures\")
++
++kcmutils_add_qml_kcm(kcm_kwintouchpadgestures SOURCES kcmkwintouchpadgestures.cpp)
++
++target_link_libraries(kcm_kwintouchpadgestures PRIVATE
++    KF6::ConfigCore
++    KF6::I18n
++    KF6::KCMUtils
++    KF6::KCMUtilsQuick
++)
+diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcm_kwintouchpadgestures.json kwin-6.7.1/src/kcms/touchpadgestures/kcm_kwintouchpadgestures.json
+--- kwin-6.7.1.orig/src/kcms/touchpadgestures/kcm_kwintouchpadgestures.json	1970-01-01 02:00:00.000000000 +0200
++++ kwin-6.7.1/src/kcms/touchpadgestures/kcm_kwintouchpadgestures.json	2026-06-24 11:03:04.594733645 +0300
+@@ -0,0 +1,12 @@
++{
++    "Categories": "Qt;KDE;",
++    "KPlugin": {
++        "Description": "Configure custom KWin touchpad gestures",
++        "Icon": "input-touchpad",
++        "Name": "Touchpad Gestures"
++    },
++    "X-KDE-Keywords": "touchpad,gestures,swipe,kwin,windows",
++    "X-KDE-ParentApp": "kcontrol",
++    "X-KDE-System-Settings-Parent-Category": "input-devices",
++    "X-KDE-Weight": 75
++}
+diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp
+--- kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp	1970-01-01 02:00:00.000000000 +0200
++++ kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp	2026-06-24 11:45:07.972443363 +0300
+@@ -0,0 +1,301 @@
++/*
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include "kcmkwintouchpadgestures.h"
++
++#include <KConfigGroup>
++#include <KPluginFactory>
++#include <KSharedConfig>
++
++#include <QSet>
++
++namespace
++{
++constexpr double defaultAxisLockMinimumDelta = 30.0;
++constexpr double defaultAxisLockDominanceRatio = 1.6;
++
++const QString disabledAction()
++{
++    return QStringLiteral("Disabled");
++}
++
++const QString defaultThreeFingerUp()
++{
++    return QStringLiteral("Overview");
++}
++
++const QString defaultThreeFingerDown()
++{
++    return QStringLiteral("MinimizeAll");
++}
++
++const QString defaultThreeFingerLeft()
++{
++    return QStringLiteral("SwitchWindowPrevious");
++}
++
++const QString defaultThreeFingerRight()
++{
++    return QStringLiteral("SwitchWindowNext");
++}
++
++const QString defaultFourFingerLeft()
++{
++    return QStringLiteral("PreviousVirtualDesktop");
++}
++
++const QString defaultFourFingerRight()
++{
++    return QStringLiteral("NextVirtualDesktop");
++}
++
++QString checkedAction(const KConfigGroup &group, const QString &key, const QString &defaultValue, const QSet<QString> &allowedActions)
++{
++    const QString action = group.readEntry(key, defaultValue);
++    if (allowedActions.contains(action)) {
++        return action;
++    }
++    return defaultValue;
++}
++
++bool sameDouble(double lhs, double rhs)
++{
++    return qFuzzyCompare(lhs + 1.0, rhs + 1.0);
++}
++}
++
++K_PLUGIN_FACTORY_WITH_JSON(KcmKWinTouchpadGesturesFactory, "kcm_kwintouchpadgestures.json", registerPlugin<KcmKWinTouchpadGestures>();)
++
++KcmKWinTouchpadGestures::KcmKWinTouchpadGestures(QObject *parent, const KPluginMetaData &metaData)
++    : KQuickConfigModule(parent, metaData)
++{
++    setButtons(Apply | Default);
++}
++
++KcmKWinTouchpadGestures::~KcmKWinTouchpadGestures() = default;
++
++QString KcmKWinTouchpadGestures::threeFingerUp() const
++{
++    return m_threeFingerUp;
++}
++
++void KcmKWinTouchpadGestures::setThreeFingerUp(const QString &action)
++{
++    if (m_threeFingerUp == action) {
++        return;
++    }
++    m_threeFingerUp = action;
++    Q_EMIT threeFingerUpChanged();
++    updateState();
++}
++
++QString KcmKWinTouchpadGestures::threeFingerDown() const
++{
++    return m_threeFingerDown;
++}
++
++void KcmKWinTouchpadGestures::setThreeFingerDown(const QString &action)
++{
++    if (m_threeFingerDown == action) {
++        return;
++    }
++    m_threeFingerDown = action;
++    Q_EMIT threeFingerDownChanged();
++    updateState();
++}
++
++QString KcmKWinTouchpadGestures::threeFingerLeft() const
++{
++    return m_threeFingerLeft;
++}
++
++void KcmKWinTouchpadGestures::setThreeFingerLeft(const QString &action)
++{
++    if (m_threeFingerLeft == action) {
++        return;
++    }
++    m_threeFingerLeft = action;
++    Q_EMIT threeFingerLeftChanged();
++    updateState();
++}
++
++QString KcmKWinTouchpadGestures::threeFingerRight() const
++{
++    return m_threeFingerRight;
++}
++
++void KcmKWinTouchpadGestures::setThreeFingerRight(const QString &action)
++{
++    if (m_threeFingerRight == action) {
++        return;
++    }
++    m_threeFingerRight = action;
++    Q_EMIT threeFingerRightChanged();
++    updateState();
++}
++
++QString KcmKWinTouchpadGestures::fourFingerLeft() const
++{
++    return m_fourFingerLeft;
++}
++
++void KcmKWinTouchpadGestures::setFourFingerLeft(const QString &action)
++{
++    if (m_fourFingerLeft == action) {
++        return;
++    }
++    m_fourFingerLeft = action;
++    Q_EMIT fourFingerLeftChanged();
++    updateState();
++}
++
++QString KcmKWinTouchpadGestures::fourFingerRight() const
++{
++    return m_fourFingerRight;
++}
++
++void KcmKWinTouchpadGestures::setFourFingerRight(const QString &action)
++{
++    if (m_fourFingerRight == action) {
++        return;
++    }
++    m_fourFingerRight = action;
++    Q_EMIT fourFingerRightChanged();
++    updateState();
++}
++
++double KcmKWinTouchpadGestures::axisLockMinimumDelta() const
++{
++    return m_axisLockMinimumDelta;
++}
++
++void KcmKWinTouchpadGestures::setAxisLockMinimumDelta(double delta)
++{
++    if (sameDouble(m_axisLockMinimumDelta, delta)) {
++        return;
++    }
++    m_axisLockMinimumDelta = delta;
++    Q_EMIT axisLockMinimumDeltaChanged();
++    updateState();
++}
++
++double KcmKWinTouchpadGestures::axisLockDominanceRatio() const
++{
++    return m_axisLockDominanceRatio;
++}
++
++void KcmKWinTouchpadGestures::setAxisLockDominanceRatio(double ratio)
++{
++    if (sameDouble(m_axisLockDominanceRatio, ratio)) {
++        return;
++    }
++    m_axisLockDominanceRatio = ratio;
++    Q_EMIT axisLockDominanceRatioChanged();
++    updateState();
++}
++
++void KcmKWinTouchpadGestures::load()
++{
++    const KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"));
++    const QSet<QString> overviewActions = {disabledAction(), defaultThreeFingerUp()};
++    const QSet<QString> minimizeActions = {disabledAction(), defaultThreeFingerDown()};
++    const QSet<QString> windowLeftActions = {disabledAction(), defaultThreeFingerLeft()};
++    const QSet<QString> windowRightActions = {disabledAction(), defaultThreeFingerRight()};
++    const QSet<QString> desktopLeftActions = {disabledAction(), defaultFourFingerLeft()};
++    const QSet<QString> desktopRightActions = {disabledAction(), defaultFourFingerRight()};
++
++    setThreeFingerUp(checkedAction(group, QStringLiteral("ThreeFingerUp"), defaultThreeFingerUp(), overviewActions));
++    setThreeFingerDown(checkedAction(group, QStringLiteral("ThreeFingerDown"), defaultThreeFingerDown(), minimizeActions));
++    setThreeFingerLeft(checkedAction(group, QStringLiteral("ThreeFingerLeft"), defaultThreeFingerLeft(), windowLeftActions));
++    setThreeFingerRight(checkedAction(group, QStringLiteral("ThreeFingerRight"), defaultThreeFingerRight(), windowRightActions));
++    setFourFingerLeft(checkedAction(group, QStringLiteral("FourFingerLeft"), defaultFourFingerLeft(), desktopLeftActions));
++    setFourFingerRight(checkedAction(group, QStringLiteral("FourFingerRight"), defaultFourFingerRight(), desktopRightActions));
++    setAxisLockMinimumDelta(group.readEntry("AxisLockMinimumDelta", defaultAxisLockMinimumDelta));
++    setAxisLockDominanceRatio(group.readEntry("AxisLockDominanceRatio", defaultAxisLockDominanceRatio));
++
++    m_savedThreeFingerUp = m_threeFingerUp;
++    m_savedThreeFingerDown = m_threeFingerDown;
++    m_savedThreeFingerLeft = m_threeFingerLeft;
++    m_savedThreeFingerRight = m_threeFingerRight;
++    m_savedFourFingerLeft = m_fourFingerLeft;
++    m_savedFourFingerRight = m_fourFingerRight;
++    m_savedAxisLockMinimumDelta = m_axisLockMinimumDelta;
++    m_savedAxisLockDominanceRatio = m_axisLockDominanceRatio;
++
++    updateState();
++}
++
++void KcmKWinTouchpadGestures::save()
++{
++    KSharedConfigPtr config = KSharedConfig::openConfig(QStringLiteral("kwinrc"));
++    KConfigGroup group(config, QStringLiteral("TouchpadGestures"));
++    group.writeEntry("ThreeFingerUp", m_threeFingerUp);
++    group.writeEntry("ThreeFingerDown", m_threeFingerDown);
++    group.writeEntry("ThreeFingerLeft", m_threeFingerLeft);
++    group.writeEntry("ThreeFingerRight", m_threeFingerRight);
++    group.writeEntry("FourFingerLeft", m_fourFingerLeft);
++    group.writeEntry("FourFingerRight", m_fourFingerRight);
++    group.writeEntry("AxisLockMinimumDelta", m_axisLockMinimumDelta);
++    group.writeEntry("AxisLockDominanceRatio", m_axisLockDominanceRatio);
++    group.sync();
++    config->sync();
++
++    m_savedThreeFingerUp = m_threeFingerUp;
++    m_savedThreeFingerDown = m_threeFingerDown;
++    m_savedThreeFingerLeft = m_threeFingerLeft;
++    m_savedThreeFingerRight = m_threeFingerRight;
++    m_savedFourFingerLeft = m_fourFingerLeft;
++    m_savedFourFingerRight = m_fourFingerRight;
++    m_savedAxisLockMinimumDelta = m_axisLockMinimumDelta;
++    m_savedAxisLockDominanceRatio = m_axisLockDominanceRatio;
++
++    updateState();
++}
++
++void KcmKWinTouchpadGestures::defaults()
++{
++    setThreeFingerUp(defaultThreeFingerUp());
++    setThreeFingerDown(defaultThreeFingerDown());
++    setThreeFingerLeft(defaultThreeFingerLeft());
++    setThreeFingerRight(defaultThreeFingerRight());
++    setFourFingerLeft(defaultFourFingerLeft());
++    setFourFingerRight(defaultFourFingerRight());
++    setAxisLockMinimumDelta(defaultAxisLockMinimumDelta);
++    setAxisLockDominanceRatio(defaultAxisLockDominanceRatio);
++    updateState();
++}
++
++void KcmKWinTouchpadGestures::updateState()
++{
++    setNeedsSave(isSaveNeeded());
++    setRepresentsDefaults(isDefaults());
++}
++
++bool KcmKWinTouchpadGestures::isDefaults() const
++{
++    return m_threeFingerUp == defaultThreeFingerUp()
++        && m_threeFingerDown == defaultThreeFingerDown()
++        && m_threeFingerLeft == defaultThreeFingerLeft()
++        && m_threeFingerRight == defaultThreeFingerRight()
++        && m_fourFingerLeft == defaultFourFingerLeft()
++        && m_fourFingerRight == defaultFourFingerRight()
++        && sameDouble(m_axisLockMinimumDelta, defaultAxisLockMinimumDelta)
++        && sameDouble(m_axisLockDominanceRatio, defaultAxisLockDominanceRatio);
++}
++
++bool KcmKWinTouchpadGestures::isSaveNeeded() const
++{
++    return m_threeFingerUp != m_savedThreeFingerUp
++        || m_threeFingerDown != m_savedThreeFingerDown
++        || m_threeFingerLeft != m_savedThreeFingerLeft
++        || m_threeFingerRight != m_savedThreeFingerRight
++        || m_fourFingerLeft != m_savedFourFingerLeft
++        || m_fourFingerRight != m_savedFourFingerRight
++        || !sameDouble(m_axisLockMinimumDelta, m_savedAxisLockMinimumDelta)
++        || !sameDouble(m_axisLockDominanceRatio, m_savedAxisLockDominanceRatio);
++}
++
++#include "kcmkwintouchpadgestures.moc"
++
++#include "moc_kcmkwintouchpadgestures.cpp"
+diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.h kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.h
+--- kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.h	1970-01-01 02:00:00.000000000 +0200
++++ kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.h	2026-06-24 11:44:11.413261439 +0300
+@@ -0,0 +1,88 @@
++/*
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#pragma once
++
++#include <KQuickConfigModule>
++
++#include <QString>
++
++class KcmKWinTouchpadGestures : public KQuickConfigModule
++{
++    Q_OBJECT
++    Q_PROPERTY(QString threeFingerUp READ threeFingerUp WRITE setThreeFingerUp NOTIFY threeFingerUpChanged)
++    Q_PROPERTY(QString threeFingerDown READ threeFingerDown WRITE setThreeFingerDown NOTIFY threeFingerDownChanged)
++    Q_PROPERTY(QString threeFingerLeft READ threeFingerLeft WRITE setThreeFingerLeft NOTIFY threeFingerLeftChanged)
++    Q_PROPERTY(QString threeFingerRight READ threeFingerRight WRITE setThreeFingerRight NOTIFY threeFingerRightChanged)
++    Q_PROPERTY(QString fourFingerLeft READ fourFingerLeft WRITE setFourFingerLeft NOTIFY fourFingerLeftChanged)
++    Q_PROPERTY(QString fourFingerRight READ fourFingerRight WRITE setFourFingerRight NOTIFY fourFingerRightChanged)
++    Q_PROPERTY(double axisLockMinimumDelta READ axisLockMinimumDelta WRITE setAxisLockMinimumDelta NOTIFY axisLockMinimumDeltaChanged)
++    Q_PROPERTY(double axisLockDominanceRatio READ axisLockDominanceRatio WRITE setAxisLockDominanceRatio NOTIFY axisLockDominanceRatioChanged)
++
++public:
++    explicit KcmKWinTouchpadGestures(QObject *parent, const KPluginMetaData &metaData);
++    ~KcmKWinTouchpadGestures() override;
++
++    QString threeFingerUp() const;
++    void setThreeFingerUp(const QString &action);
++
++    QString threeFingerDown() const;
++    void setThreeFingerDown(const QString &action);
++
++    QString threeFingerLeft() const;
++    void setThreeFingerLeft(const QString &action);
++
++    QString threeFingerRight() const;
++    void setThreeFingerRight(const QString &action);
++
++    QString fourFingerLeft() const;
++    void setFourFingerLeft(const QString &action);
++
++    QString fourFingerRight() const;
++    void setFourFingerRight(const QString &action);
++
++    double axisLockMinimumDelta() const;
++    void setAxisLockMinimumDelta(double delta);
++
++    double axisLockDominanceRatio() const;
++    void setAxisLockDominanceRatio(double ratio);
++
++public Q_SLOTS:
++    void load() override;
++    void save() override;
++    void defaults() override;
++
++Q_SIGNALS:
++    void threeFingerUpChanged();
++    void threeFingerDownChanged();
++    void threeFingerLeftChanged();
++    void threeFingerRightChanged();
++    void fourFingerLeftChanged();
++    void fourFingerRightChanged();
++    void axisLockMinimumDeltaChanged();
++    void axisLockDominanceRatioChanged();
++
++private:
++    void updateState();
++    bool isDefaults() const;
++    bool isSaveNeeded() const;
++
++    QString m_threeFingerUp;
++    QString m_threeFingerDown;
++    QString m_threeFingerLeft;
++    QString m_threeFingerRight;
++    QString m_fourFingerLeft;
++    QString m_fourFingerRight;
++    double m_axisLockMinimumDelta = 30.0;
++    double m_axisLockDominanceRatio = 1.6;
++
++    QString m_savedThreeFingerUp;
++    QString m_savedThreeFingerDown;
++    QString m_savedThreeFingerLeft;
++    QString m_savedThreeFingerRight;
++    QString m_savedFourFingerLeft;
++    QString m_savedFourFingerRight;
++    double m_savedAxisLockMinimumDelta = 30.0;
++    double m_savedAxisLockDominanceRatio = 1.6;
++};
+diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/kcms/touchpadgestures/ui/main.qml
+--- kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml	1970-01-01 02:00:00.000000000 +0200
++++ kwin-6.7.1/src/kcms/touchpadgestures/ui/main.qml	2026-06-24 11:45:40.823107480 +0300
+@@ -0,0 +1,132 @@
++/*
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++import QtQuick
++import QtQuick.Layouts
++import QtQuick.Controls as QQC2
++import org.kde.kirigami as Kirigami
++import org.kde.kcmutils as KCM
++
++KCM.SimpleKCM {
++    id: root
++
++    implicitWidth: Kirigami.Units.gridUnit * 48
++    implicitHeight: Kirigami.Units.gridUnit * 34
++
++    readonly property var noAction: [{ text: i18nc("@item:inlistbox Touchpad gesture action", "Disabled"), value: "Disabled" }]
++    readonly property var overviewActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Overview"), value: "Overview" }])
++    readonly property var minimizeActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Minimize All Windows"), value: "MinimizeAll" }])
++    readonly property var windowLeftActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Window"), value: "SwitchWindowPrevious" }])
++    readonly property var windowRightActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Next Window"), value: "SwitchWindowNext" }])
++    readonly property var desktopLeftActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Virtual Desktop"), value: "PreviousVirtualDesktop" }])
++    readonly property var desktopRightActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Next Virtual Desktop"), value: "NextVirtualDesktop" }])
++
++    function indexOfAction(model, value) {
++        for (let i = 0; i < model.length; ++i) {
++            if (model[i].value === value) {
++                return i;
++            }
++        }
++        return 0;
++    }
++
++    ColumnLayout {
++        spacing: Kirigami.Units.largeSpacing
++
++        Kirigami.InlineMessage {
++            Layout.fillWidth: true
++            type: Kirigami.MessageType.Information
++            text: i18nc("@info:usagetip", "Gesture changes are applied after restarting the Plasma session.")
++            visible: true
++        }
++
++        Kirigami.FormLayout {
++            Layout.fillWidth: true
++
++            Kirigami.Heading {
++                Kirigami.FormData.isSection: true
++                text: i18nc("@title:group", "Three-Finger Gestures")
++                level: 2
++            }
++
++            QQC2.ComboBox {
++                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe up:")
++                textRole: "text"
++                model: root.overviewActions
++                currentIndex: root.indexOfAction(root.overviewActions, kcm.threeFingerUp)
++                onActivated: function(index) { kcm.threeFingerUp = root.overviewActions[index].value }
++            }
++
++            QQC2.ComboBox {
++                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe down:")
++                textRole: "text"
++                model: root.minimizeActions
++                currentIndex: root.indexOfAction(root.minimizeActions, kcm.threeFingerDown)
++                onActivated: function(index) { kcm.threeFingerDown = root.minimizeActions[index].value }
++            }
++
++            QQC2.ComboBox {
++                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe left:")
++                textRole: "text"
++                model: root.windowLeftActions
++                currentIndex: root.indexOfAction(root.windowLeftActions, kcm.threeFingerLeft)
++                onActivated: function(index) { kcm.threeFingerLeft = root.windowLeftActions[index].value }
++            }
++
++            QQC2.ComboBox {
++                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe right:")
++                textRole: "text"
++                model: root.windowRightActions
++                currentIndex: root.indexOfAction(root.windowRightActions, kcm.threeFingerRight)
++                onActivated: function(index) { kcm.threeFingerRight = root.windowRightActions[index].value }
++            }
++
++            Kirigami.Heading {
++                Kirigami.FormData.isSection: true
++                text: i18nc("@title:group", "Four-Finger Gestures")
++                level: 2
++            }
++
++            QQC2.ComboBox {
++                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe left:")
++                textRole: "text"
++                model: root.desktopLeftActions
++                currentIndex: root.indexOfAction(root.desktopLeftActions, kcm.fourFingerLeft)
++                onActivated: function(index) { kcm.fourFingerLeft = root.desktopLeftActions[index].value }
++            }
++
++            QQC2.ComboBox {
++                Kirigami.FormData.label: i18nc("@label:listbox", "Swipe right:")
++                textRole: "text"
++                model: root.desktopRightActions
++                currentIndex: root.indexOfAction(root.desktopRightActions, kcm.fourFingerRight)
++                onActivated: function(index) { kcm.fourFingerRight = root.desktopRightActions[index].value }
++            }
++
++            Kirigami.Heading {
++                Kirigami.FormData.isSection: true
++                text: i18nc("@title:group", "Sensitivity")
++                level: 2
++            }
++
++            QQC2.SpinBox {
++                Kirigami.FormData.label: i18nc("@label:spinbox", "Axis lock distance:")
++                from: 5
++                to: 120
++                value: Math.round(kcm.axisLockMinimumDelta)
++                onValueModified: kcm.axisLockMinimumDelta = value
++            }
++
++            QQC2.SpinBox {
++                Kirigami.FormData.label: i18nc("@label:spinbox", "Axis dominance:")
++                from: 10
++                to: 40
++                value: Math.round(kcm.axisLockDominanceRatio * 10)
++                textFromValue: function(value) { return (value / 10).toFixed(1) }
++                valueFromText: function(text) { return Number.fromLocaleString(Qt.locale(), text) * 10 }
++                onValueModified: kcm.axisLockDominanceRatio = value / 10
++            }
++        }
++    }
++}
+diff -ruN kwin-6.7.1.orig/src/plugins/overview/overvieweffect.cpp kwin-6.7.1/src/plugins/overview/overvieweffect.cpp
+--- kwin-6.7.1.orig/src/plugins/overview/overvieweffect.cpp	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/plugins/overview/overvieweffect.cpp	2026-06-24 11:02:00.907368562 +0300
+@@ -10,10 +10,13 @@
+ 
+ #include <KGlobalAccel>
+ #include <KLocalizedString>
++#include <KConfigGroup>
++#include <KSharedConfig>
+ 
+ #include <QAction>
+ #include <QDebug>
+ #include <QQuickItem>
++#include <QSet>
+ #include <QTimer>
+ 
+ using namespace std::chrono_literals;
+@@ -21,6 +24,27 @@
+ namespace KWin
+ {
+ 
++namespace
++{
++
++QString touchpadGestureAction(const QString &key, const QString &defaultAction)
++{
++    const KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"));
++    const QString action = group.readEntry(key, defaultAction);
++    static const QSet<QString> supportedActions = {
++        QStringLiteral("Disabled"),
++        QStringLiteral("Overview"),
++        QStringLiteral("MinimizeAll"),
++        QStringLiteral("SwitchWindowPrevious"),
++        QStringLiteral("SwitchWindowNext"),
++        QStringLiteral("PreviousVirtualDesktop"),
++        QStringLiteral("NextVirtualDesktop"),
++    };
++    return supportedActions.contains(action) ? action : defaultAction;
++}
++
++}
++
+ OverviewEffect::OverviewEffect()
+     // manages the transition between inactive -> overview
+     : m_overviewState(new EffectTogglableState(this))
+@@ -33,6 +57,9 @@
      , m_shutdownTimer(new QTimer(this))
  {
      auto gesture = new EffectTogglableGesture(m_overviewState);
-+    gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 3);
++    if (touchpadGestureAction(QStringLiteral("ThreeFingerUp"), QStringLiteral("Overview")) == QLatin1String("Overview")) {
++        gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 3);
++    }
      gesture->addTouchpadSwipeGesture(SwipeDirection::Up, 4);
      gesture->addTouchscreenSwipeGesture(SwipeDirection::Up, 3);
  
-diff -urN a/src/useractions.cpp b/src/useractions.cpp
---- a/src/useractions.cpp	2026-06-23 11:12:31.000000000 +0300
-+++ b/src/useractions.cpp	2026-06-24 00:05:50.701134983 +0300
+diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
+--- kwin-6.7.1.orig/src/useractions.cpp	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/useractions.cpp	2026-06-24 11:02:00.712368219 +0300
 @@ -27,6 +27,7 @@
  
  #include "core/output.h"
@@ -66,23 +719,81 @@ diff -urN a/src/useractions.cpp b/src/useractions.cpp
  #include "input.h"
  #include "options.h"
  #include "pointer_input.h"
-@@ -980,6 +981,15 @@
+@@ -48,11 +49,14 @@
+ #include <QCheckBox>
+ #include <QFileInfo>
+ #include <QPushButton>
++#include <QSet>
+ #include <QWindow>
+ 
+ #include <KGlobalAccel>
+ #include <KLazyLocalizedString>
+ #include <KLocalizedString>
++#include <KConfigGroup>
++#include <KSharedConfig>
+ #include <QAction>
+ #include <QActionGroup>
+ #include <QMenu>
+@@ -68,6 +72,45 @@
+ namespace KWin
+ {
+ 
++namespace
++{
++
++QString touchpadGestureAction(const QString &key, const QString &defaultAction)
++{
++    const KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"));
++    const QString action = group.readEntry(key, defaultAction);
++    static const QSet<QString> supportedActions = {
++        QStringLiteral("Disabled"),
++        QStringLiteral("Overview"),
++        QStringLiteral("MinimizeAll"),
++        QStringLiteral("SwitchWindowPrevious"),
++        QStringLiteral("SwitchWindowNext"),
++        QStringLiteral("PreviousVirtualDesktop"),
++        QStringLiteral("NextVirtualDesktop"),
++    };
++    return supportedActions.contains(action) ? action : defaultAction;
++}
++
++QAction *createTouchpadAction(QObject *parent, Workspace *receiver, void (Workspace::*slot)())
++{
++    auto action = new QAction(parent);
++    QObject::connect(action, &QAction::triggered, receiver, slot);
++    return action;
++}
++
++void registerWorkspaceTouchpadSwipe(Workspace *workspace, SwipeDirection direction, uint fingerCount, const QString &actionName)
++{
++    if (actionName == QLatin1String("MinimizeAll")) {
++        input()->registerTouchpadSwipeShortcut(direction, fingerCount, createTouchpadAction(workspace, workspace, &Workspace::slotTouchpadMinimizeAll));
++    } else if (actionName == QLatin1String("SwitchWindowPrevious")) {
++        input()->registerTouchpadSwipeShortcut(direction, fingerCount, createTouchpadAction(workspace, workspace, &Workspace::slotTouchpadSwitchWindowBackward));
++    } else if (actionName == QLatin1String("SwitchWindowNext")) {
++        input()->registerTouchpadSwipeShortcut(direction, fingerCount, createTouchpadAction(workspace, workspace, &Workspace::slotTouchpadSwitchWindowForward));
++    }
++}
++
++}
++
+ UserActionsMenu::UserActionsMenu(QObject *parent)
+     : QObject(parent)
+     , m_menu(nullptr)
+@@ -980,6 +1023,12 @@
  
      initShortcut("Show Desktop", i18n("Peek at Desktop"),
                   Qt::META | Qt::Key_D, &Workspace::slotToggleShowDesktop, false);
-+    QAction *minimizeAllTouchpadAction = new QAction(this);
-+    connect(minimizeAllTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadMinimizeAll);
-+    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, minimizeAllTouchpadAction);
-+    QAction *switchWindowForwardTouchpadAction = new QAction(this);
-+    connect(switchWindowForwardTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadSwitchWindowForward);
-+    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, switchWindowForwardTouchpadAction);
-+    QAction *switchWindowBackwardTouchpadAction = new QAction(this);
-+    connect(switchWindowBackwardTouchpadAction, &QAction::triggered, this, &Workspace::slotTouchpadSwitchWindowBackward);
-+    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, switchWindowBackwardTouchpadAction);
++    registerWorkspaceTouchpadSwipe(this, SwipeDirection::Up, 3, touchpadGestureAction(QStringLiteral("ThreeFingerUp"), QStringLiteral("Overview")));
++    registerWorkspaceTouchpadSwipe(this, SwipeDirection::Down, 3, touchpadGestureAction(QStringLiteral("ThreeFingerDown"), QStringLiteral("MinimizeAll")));
++    registerWorkspaceTouchpadSwipe(this, SwipeDirection::Left, 3, touchpadGestureAction(QStringLiteral("ThreeFingerLeft"), QStringLiteral("SwitchWindowPrevious")));
++    registerWorkspaceTouchpadSwipe(this, SwipeDirection::Right, 3, touchpadGestureAction(QStringLiteral("ThreeFingerRight"), QStringLiteral("SwitchWindowNext")));
++    registerWorkspaceTouchpadSwipe(this, SwipeDirection::Left, 4, touchpadGestureAction(QStringLiteral("FourFingerLeft"), QStringLiteral("PreviousVirtualDesktop")));
++    registerWorkspaceTouchpadSwipe(this, SwipeDirection::Right, 4, touchpadGestureAction(QStringLiteral("FourFingerRight"), QStringLiteral("NextVirtualDesktop")));
  
      initShortcut("Kill Window", i18n("Kill Window"), Qt::META | Qt::CTRL | Qt::Key_Escape, &Workspace::slotKillWindow, true);
  
-@@ -1422,6 +1432,128 @@
+@@ -1422,6 +1471,128 @@
      setShowingDesktop(!showingDesktop());
  }
  
@@ -211,17 +922,56 @@ diff -urN a/src/useractions.cpp b/src/useractions.cpp
  void windowToDesktop(Window *window, VirtualDesktopManager::Direction direction)
  {
      if (window->isDesktop() || window->isDock()) {
-diff -urN a/src/virtualdesktops.cpp b/src/virtualdesktops.cpp
---- a/src/virtualdesktops.cpp	2026-06-23 11:12:31.000000000 +0300
-+++ b/src/virtualdesktops.cpp	2026-06-23 23:54:54.950509232 +0300
-@@ -803,22 +803,8 @@
+diff -ruN kwin-6.7.1.orig/src/virtualdesktops.cpp kwin-6.7.1/src/virtualdesktops.cpp
+--- kwin-6.7.1.orig/src/virtualdesktops.cpp	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/virtualdesktops.cpp	2026-06-24 11:02:00.809368390 +0300
+@@ -19,6 +19,7 @@
+ #include <KConfigGroup>
+ #include <KGlobalAccel>
+ #include <KLocalizedString>
++#include <KSharedConfig>
+ #if KWIN_BUILD_X11
+ #include "netinfo.h"
+ #include <NETWM>
+@@ -27,6 +28,7 @@
+ // Qt
+ #include <QAction>
+ #include <QDebug>
++#include <QSet>
+ #include <QUuid>
+ 
+ #include <algorithm>
+@@ -37,6 +39,22 @@
+ static bool s_loadingDesktopSettings = false;
+ static const double GESTURE_SWITCH_THRESHOLD = .25;
+ 
++static QString touchpadGestureAction(const QString &key, const QString &defaultAction)
++{
++    const KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"));
++    const QString action = group.readEntry(key, defaultAction);
++    static const QSet<QString> supportedActions = {
++        QStringLiteral("Disabled"),
++        QStringLiteral("Overview"),
++        QStringLiteral("MinimizeAll"),
++        QStringLiteral("SwitchWindowPrevious"),
++        QStringLiteral("SwitchWindowNext"),
++        QStringLiteral("PreviousVirtualDesktop"),
++        QStringLiteral("NextVirtualDesktop"),
++    };
++    return supportedActions.contains(action) ? action : defaultAction;
++}
++
+ static QString generateDesktopId()
+ {
+     return QUuid::createUuid().toString(QUuid::WithoutBraces);
+@@ -803,22 +821,18 @@
              emitCurrentChanging();
          }
      };
 -    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
 -    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
-     input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 4, m_swipeGestureReleasedX.get(), left);
-     input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 4, m_swipeGestureReleasedX.get(), right);
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 4, m_swipeGestureReleasedX.get(), left);
+-    input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 4, m_swipeGestureReleasedX.get(), right);
 -    input()->registerTouchpadSwipeShortcut(SwipeDirection::Down, 3, m_swipeGestureReleasedY.get(), [this, emitCurrentChanging](qreal cb) {
 -        if (grid().height() > 1) {
 -            m_currentDesktopOffset.setY(-cb);
@@ -234,12 +984,24 @@ diff -urN a/src/virtualdesktops.cpp b/src/virtualdesktops.cpp
 -            emitCurrentChanging();
 -        }
 -    });
++    if (touchpadGestureAction(QStringLiteral("ThreeFingerLeft"), QStringLiteral("SwitchWindowPrevious")) == QLatin1String("PreviousVirtualDesktop")) {
++        input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
++    }
++    if (touchpadGestureAction(QStringLiteral("ThreeFingerRight"), QStringLiteral("SwitchWindowNext")) == QLatin1String("NextVirtualDesktop")) {
++        input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
++    }
++    if (touchpadGestureAction(QStringLiteral("FourFingerLeft"), QStringLiteral("PreviousVirtualDesktop")) == QLatin1String("PreviousVirtualDesktop")) {
++        input()->registerTouchpadSwipeShortcut(SwipeDirection::Left, 4, m_swipeGestureReleasedX.get(), left);
++    }
++    if (touchpadGestureAction(QStringLiteral("FourFingerRight"), QStringLiteral("NextVirtualDesktop")) == QLatin1String("NextVirtualDesktop")) {
++        input()->registerTouchpadSwipeShortcut(SwipeDirection::Right, 4, m_swipeGestureReleasedX.get(), right);
++    }
      input()->registerTouchscreenSwipeShortcut(SwipeDirection::Left, 3, m_swipeGestureReleasedX.get(), left);
      input()->registerTouchscreenSwipeShortcut(SwipeDirection::Right, 3, m_swipeGestureReleasedX.get(), right);
  
-diff -urN a/src/workspace.h b/src/workspace.h
---- a/src/workspace.h	2026-06-23 11:12:31.000000000 +0300
-+++ b/src/workspace.h	2026-06-23 23:54:54.950718328 +0300
+diff -ruN kwin-6.7.1.orig/src/workspace.h kwin-6.7.1/src/workspace.h
+--- kwin-6.7.1.orig/src/workspace.h	2026-06-23 11:12:31.000000000 +0300
++++ kwin-6.7.1/src/workspace.h	2026-06-23 23:54:54.950718328 +0300
 @@ -22,7 +22,9 @@
  // KF
  #include <netwm_def.h>

@@ -5,7 +5,7 @@ Bu proje KWin'i komple fork olarak tasimaz. Arch/CachyOS paketleme akisi kullani
 ## Sistem sinirlari
 
 - Hedef ortam CachyOS/KDE Plasma Wayland ve KWin 6.7.1'dir.
-- Proje runtime servisi calistirmaz; sadece KWin paketini derleyen kaynak/paketleme deposudur.
+- Proje runtime servisi calistirmaz; KWin patchi ve System Settings KCM'i ayni paket icinde gelir.
 - Kurulum `sudo pacman -U` gerektirir ve kullanici terminalinde yapilir.
 - Normal sistem guncellemeleri patchli KWin paketini ezebilir. Faz 1'de bu otomatik cozulmez; KWin surumu degisince patch yeni kaynak surumune yeniden tasinir.
 
@@ -15,9 +15,13 @@ Bu proje KWin'i komple fork olarak tasimaz. Arch/CachyOS paketleme akisi kullani
 - `packaging/arch/kwin-touchpad-gestures.patch`: aktif stable davranisi kuran patch.
 - `patches/stable/`: bilinen calisan patch snapshotlari.
 - `patches/experimental/`: stable olmayan tasarim denemeleri.
+- `scripts/`: patchli paket build ve kurulu paket durum kontrol yardimcilari.
 
 ## Stable gesture behavior
 
+- Gesture atamalari `kwinrc` icindeki `[TouchpadGestures]` grubundan okunur. Bos veya gecersiz degerler stable defaultlara duser.
+- Touchpad Gestures KCM'i generated kcfg kullanmaz; manuel `KQuickConfigModule` olarak ayni `kwinrc` grubunu okur/yazar.
+- KCM yalnizca KWin patchinin config katmanini degistirir; Fusuma, global shortcut atamalari veya klavye kombinasyonlariyla is yapmaz.
 - Overview effect 3 parmak yukari gesture kabul eder.
 - Workspace 3 parmak asagi gesture ile Minimize All davranisini tetikler.
 - Minimize All davranisi klavye kisayolu gondermez; KWin icinde uygun pencereleri dogrudan minimize eder ve gesture tarafindan minimize edilenleri tekrar geri acar.
@@ -28,6 +32,7 @@ Bu proje KWin'i komple fork olarak tasimaz. Arch/CachyOS paketleme akisi kullani
 - 4 parmak virtual desktop swipe davranisi korunur.
 - Gesture axis lock esigi yukseltilir; amac erken yanlis eksen secimini azaltmaktir.
 - Discrete gesture action'lari cancel eventinde calismaz. Cancel eventinin QAction tetiklemesi sadece Overview/virtual desktop gibi progress callback kullanan realtime gesture'larda korunur.
+- System Settings icindeki Touchpad Gestures KCM'i sabit guvenli secenekleri yazar; Apply butonu KCM property snapshot'i ile takip edilir. Runtime re-register yoktur, gesture davranis degisiklikleri KWin/Plasma restart sonrasi uygulanir.
 
 ## Related
 
