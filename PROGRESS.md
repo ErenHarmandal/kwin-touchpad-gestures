@@ -14,7 +14,7 @@
 ## Active Follow-ups
 - 3 parmak sag/sol pencere gecisini kullanici testinden sonra gerekirse siralama/hassasiyet acisindan ayarla.
 - Yatay swipe testinde sag/sol artik minimize tetiklememeli; sorun surerse sonraki hedef pencere siralama/cycle modeli olacak.
-- KWin update dayanimi icin `scripts/status.sh` ve `scripts/build-package.sh` yeterli mi gercek update sonrasi test et.
+- KWin update dayanimi icin guvenli rebuild asistani tasarla: status/build otomatik olabilir, upstream kaynak surumu degisirse riskli rebase olarak isaretlenir, `sudo pacman -U` manuel onayda kalir.
 
 ## Documentation Model
 - Start with `docs/00-agent-orientation.md`; do not scan archive history first.

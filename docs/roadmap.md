@@ -17,6 +17,8 @@ Bu roadmap, gesture patchinin once stabil davranisa, sonra daha tasinabilir ve y
 
 - KWin sistem guncellemeleri patchli paketi ezdigi icin bu durumu otomatik yakalayan veya patchi daha ayri bir katmanda tutan secenekleri arastir.
 - Ilk adim olarak paket build/status scriptleri kullanilir; KWin surumu degisince patch yeni kaynak surumune manuel rebase edilir.
+- Guvenlik varsayimi: scriptler upstream KWin degisimini algilar, patch dry-run/build dener ve raporlar; `sudo pacman -U` otomatik calismaz.
+- Ayni upstream kaynak surumunde local `pkgrel` rebuild dusuk riskli kabul edilir; upstream kaynak surumu degistiyse script bunu riskli rebase olarak isaretler.
 
 ## Faz 4: GUI configuration
 
