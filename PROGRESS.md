@@ -7,7 +7,7 @@
 - Runtime/stack: Arch PKGBUILD, KWin 6.7.1, C++/Qt/KDE patchleri
 - Current architecture summary: Proje upstream KWin kaynaklarini repoya tasimaz; Arch PKGBUILD kaynak indirir, local patch uygular, Touchpad Gestures KCM'i ekler ve paket uretir.
 - Primary validation: `scripts/build-package.sh`; full package `packaging/arch/kwin-6.7.1-1.8-x86_64.pkg.tar.zst` olarak dogrulandi.
-- Stable gesture behavior: 3 parmak yukari Overview, 3 parmak asagi Minimize All, 3 parmak sag/sol default direct window switching, 4 parmak sag/sol default virtual desktop switching; yatay gesture'lar System Settings KCM ile pencere gecisi veya virtual desktop gecisi aksiyonlarina atanabilir.
+- Stable gesture behavior: 3 parmak yukari default Overview, 3 parmak asagi default Maximize/Minimize All Windows, 3 parmak sag/sol default direct window switching, 4 parmak sag/sol default virtual desktop switching; 3 parmak yukari/asagi KCM'den overview/toggle/restore aksiyonlarina, yatay gesture'lar pencere gecisi veya virtual desktop gecisi aksiyonlarina atanabilir.
 - KCM behavior: Touchpad Gestures KCM manuel `KQuickConfigModule` kullanir; sadece `kwinrc` `[TouchpadGestures]` grubunu okur/yazar, Apply state'ini kendi property snapshot'i ile yonetir ve gesture ayarlarini temsili touchpad onizlemeli 3/4 parmak gruplari olarak gosterir.
 - Known limitation: KWin sistem guncellemeleri patchli paketi ezebilir. Faz 1'de otomatik cozum yok; yeni KWin surumu geldikce patch rebase edilir.
 
@@ -25,6 +25,10 @@
 - Obsidian vault root is `docs/`; `.obsidian/` is local and ignored.
 
 ## Recent Changelog
+- 2026-06-27: **One-way minimize option removed.** `Minimize Windows` KCM secenegi ve `MinimizeWindows` runtime token'i stable yuzeyden kaldirildi; eski config degerleri yon default'una duser, Maximize/Minimize All Windows ve Maximize Windows korunur.
+- 2026-06-24: **Minimize candidates restricted.** Touchpad minimize/restore aksiyonlari artik yalnizca normal kullanici pencerelerini hedefler; Plasma shell/panel/OSD gibi special window yuzeyleri aday listesinden cikarildi.
+- 2026-06-24: **Swipe up actions expanded.** 3 parmak yukari KCM secenekleri Overview yaninda Maximize/Minimize All Windows, Minimize Windows ve Maximize Windows aksiyonlarini da sunar; default Overview korunur.
+- 2026-06-24: **One-way minimize and restore actions added.** 3 parmak asagi KCM secenekleri Maximize/Minimize All Windows, Minimize Windows ve Maximize Windows olarak ayrildi; default toggle davranis korunur.
 - 2026-06-24: **Touchpad Gestures KCM UI grouped.** KCM 3/4 parmak gesture ayarlarini temsili touchpad onizlemesiyle ayirdi; gelismis axis lock ayarlari Advanced grubuna tasindi, runtime davranis degismedi.
 - 2026-06-24: **Horizontal gesture actions made configurable.** Touchpad Gestures KCM 3/4 parmak sag/sol gesture'larda pencere gecisi ve virtual desktop gecisi aksiyonlarini serbest sectirir; default davranis korunur.
 - 2026-06-24: **KCM config handling fixed.** Touchpad Gestures KCM `KQuickManagedConfigModule`/generated kcfg hattindan manuel `KQuickConfigModule` hattina tasindi; mevcut `kwinrc` degerleri dogru gorunur ve Apply butonu degisiklikleri algilar.

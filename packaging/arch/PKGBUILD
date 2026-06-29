@@ -86,7 +86,7 @@ source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{
         kwin-touchpad-gestures.patch)
 sha256sums=('352bfb34efad1435071960ef4cd392b110a18e1c168d1fdc5cce6b43331d0875'
             'SKIP'
-            '18c3b4c307ecbce153f88031369985a1954da39f45bba54aebd7aa3ae687bf1b')
+            'bb487d1cc0cd2db7861a3cc6be2783c225dfb17151e703f253aac0128cf6c3ea')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>

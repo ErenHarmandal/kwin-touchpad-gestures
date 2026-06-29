@@ -22,9 +22,10 @@ Bu proje KWin'i komple fork olarak tasimaz. Arch/CachyOS paketleme akisi kullani
 - Gesture atamalari `kwinrc` icindeki `[TouchpadGestures]` grubundan okunur. Bos veya gecersiz degerler stable defaultlara duser.
 - Touchpad Gestures KCM'i generated kcfg kullanmaz; manuel `KQuickConfigModule` olarak ayni `kwinrc` grubunu okur/yazar.
 - KCM yalnizca KWin patchinin config katmanini degistirir; Fusuma, global shortcut atamalari veya klavye kombinasyonlariyla is yapmaz.
-- Overview effect 3 parmak yukari gesture kabul eder.
-- Workspace 3 parmak asagi gesture ile Minimize All davranisini tetikler.
-- Minimize All davranisi klavye kisayolu gondermez; KWin icinde uygun pencereleri dogrudan minimize eder ve gesture tarafindan minimize edilenleri tekrar geri acar.
+- Overview effect 3 parmak yukari gesture'i default olarak kabul eder; KCM'de 3 parmak yukari ayni zamanda toggle/restore aksiyonlarina da atanabilir.
+- Workspace 3 parmak asagi gesture default olarak Maximize/Minimize All Windows davranisini tetikler.
+- Maximize/Minimize All Windows davranisi klavye kisayolu gondermez; KWin icinde uygun pencereleri dogrudan minimize eder ve gesture tarafindan minimize edilenleri tekrar geri acar.
+- KCM 3 parmak yukari/asagi icin Maximize/Minimize All Windows ve tek yonlu Maximize Windows aksiyonlarini sunar. Saf tek yonlu Minimize Windows secenegi problemli KWin state davranisi nedeniyle stable yuzeyden kaldirilmistir; Maximize Windows mevcut masaustu/aktivitede minimize haldeki uygun normal kullanici pencerelerini geri getirir.
 - Workspace 3/4 parmak sag/sol gesture'lar KCM'den pencere gecisi veya virtual desktop gecisi aksiyonlarina atanabilir.
 - Default olarak 3 parmak sag/sol TabBox overlay'i acmadan mevcut masaustu/aktivitedeki uygun pencereler arasinda dogrudan gecis yapar.
 - Touchpad pencere gecisi minimize, special, keep-above ve keep-below pencereleri aday listesinden cikarir.

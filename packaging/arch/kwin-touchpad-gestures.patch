@@ -123,7 +123,7 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcm_kwintouchpadgestures.jso
 diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp
 --- kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp	1970-01-01 02:00:00.000000000 +0200
 +++ kwin-6.7.1/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp	2026-06-24 11:45:07.972443363 +0300
-@@ -0,0 +1,303 @@
+@@ -0,0 +1,309 @@
 +/*
 +    SPDX-License-Identifier: GPL-2.0-or-later
 +*/
@@ -154,6 +154,11 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp 
 +const QString defaultThreeFingerDown()
 +{
 +    return QStringLiteral("MinimizeAll");
++}
++
++const QString maximizeWindowsAction()
++{
++    return QStringLiteral("MaximizeWindows");
 +}
 +
 +const QString defaultThreeFingerLeft()
@@ -324,8 +329,8 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp 
 +void KcmKWinTouchpadGestures::load()
 +{
 +    const KConfigGroup group(KSharedConfig::openConfig(QStringLiteral("kwinrc")), QStringLiteral("TouchpadGestures"));
-+    const QSet<QString> overviewActions = {disabledAction(), defaultThreeFingerUp()};
-+    const QSet<QString> minimizeActions = {disabledAction(), defaultThreeFingerDown()};
++    const QSet<QString> verticalUpActions = {disabledAction(), defaultThreeFingerUp(), defaultThreeFingerDown(), maximizeWindowsAction()};
++    const QSet<QString> minimizeActions = {disabledAction(), defaultThreeFingerDown(), maximizeWindowsAction()};
 +    const QSet<QString> horizontalActions = {
 +        disabledAction(),
 +        defaultThreeFingerLeft(),
@@ -334,7 +339,7 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.cpp 
 +        defaultFourFingerRight(),
 +    };
 +
-+    setThreeFingerUp(checkedAction(group, QStringLiteral("ThreeFingerUp"), defaultThreeFingerUp(), overviewActions));
++    setThreeFingerUp(checkedAction(group, QStringLiteral("ThreeFingerUp"), defaultThreeFingerUp(), verticalUpActions));
 +    setThreeFingerDown(checkedAction(group, QStringLiteral("ThreeFingerDown"), defaultThreeFingerDown(), minimizeActions));
 +    setThreeFingerLeft(checkedAction(group, QStringLiteral("ThreeFingerLeft"), defaultThreeFingerLeft(), horizontalActions));
 +    setThreeFingerRight(checkedAction(group, QStringLiteral("ThreeFingerRight"), defaultThreeFingerRight(), horizontalActions));
@@ -523,7 +528,7 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/kcmkwintouchpadgestures.h kw
 diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/kcms/touchpadgestures/ui/main.qml
 --- kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml	1970-01-01 02:00:00.000000000 +0200
 +++ kwin-6.7.1/src/kcms/touchpadgestures/ui/main.qml	2026-06-24 11:45:40.823107480 +0300
-@@ -0,0 +1,274 @@
+@@ -0,0 +1,281 @@
 +/*
 +    SPDX-License-Identifier: GPL-2.0-or-later
 +*/
@@ -541,8 +546,15 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/k
 +    implicitHeight: Kirigami.Units.gridUnit * 36
 +
 +    readonly property var noAction: [{ text: i18nc("@item:inlistbox Touchpad gesture action", "Disabled"), value: "Disabled" }]
-+    readonly property var overviewActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Overview"), value: "Overview" }])
-+    readonly property var minimizeActions: noAction.concat([{ text: i18nc("@item:inlistbox Touchpad gesture action", "Minimize All Windows"), value: "MinimizeAll" }])
++    readonly property var verticalUpActions: noAction.concat([
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Overview"), value: "Overview" },
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Maximize/Minimize All Windows"), value: "MinimizeAll" },
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Maximize Windows"), value: "MaximizeWindows" }
++    ])
++    readonly property var minimizeActions: noAction.concat([
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Maximize/Minimize All Windows"), value: "MinimizeAll" },
++        { text: i18nc("@item:inlistbox Touchpad gesture action", "Maximize Windows"), value: "MaximizeWindows" }
++    ])
 +    readonly property var horizontalActions: noAction.concat([
 +        { text: i18nc("@item:inlistbox Touchpad gesture action", "Previous Window"), value: "SwitchWindowPrevious" },
 +        { text: i18nc("@item:inlistbox Touchpad gesture action", "Next Window"), value: "SwitchWindowNext" },
@@ -738,7 +750,7 @@ diff -ruN kwin-6.7.1.orig/src/kcms/touchpadgestures/ui/main.qml kwin-6.7.1/src/k
 +
 +        GestureGroup {
 +            title: i18nc("@title:group", "Three-Finger Gestures")
-+            upModel: root.overviewActions
++            upModel: root.verticalUpActions
 +            downModel: root.minimizeActions
 +            leftModel: root.horizontalActions
 +            rightModel: root.horizontalActions
@@ -815,7 +827,7 @@ diff -ruN kwin-6.7.1.orig/src/plugins/overview/overvieweffect.cpp kwin-6.7.1/src
  #include <QTimer>
  
  using namespace std::chrono_literals;
-@@ -21,6 +24,27 @@
+@@ -21,6 +24,28 @@
  namespace KWin
  {
  
@@ -830,6 +842,7 @@ diff -ruN kwin-6.7.1.orig/src/plugins/overview/overvieweffect.cpp kwin-6.7.1/src
 +        QStringLiteral("Disabled"),
 +        QStringLiteral("Overview"),
 +        QStringLiteral("MinimizeAll"),
++        QStringLiteral("MaximizeWindows"),
 +        QStringLiteral("SwitchWindowPrevious"),
 +        QStringLiteral("SwitchWindowNext"),
 +        QStringLiteral("PreviousVirtualDesktop"),
@@ -879,7 +892,7 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
  #include <QAction>
  #include <QActionGroup>
  #include <QMenu>
-@@ -68,6 +72,45 @@
+@@ -68,6 +72,55 @@
  namespace KWin
  {
  
@@ -894,12 +907,20 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
 +        QStringLiteral("Disabled"),
 +        QStringLiteral("Overview"),
 +        QStringLiteral("MinimizeAll"),
++        QStringLiteral("MaximizeWindows"),
 +        QStringLiteral("SwitchWindowPrevious"),
 +        QStringLiteral("SwitchWindowNext"),
 +        QStringLiteral("PreviousVirtualDesktop"),
 +        QStringLiteral("NextVirtualDesktop"),
 +    };
 +    return supportedActions.contains(action) ? action : defaultAction;
++}
++
++bool isTouchpadMinimizeCandidate(Window *window)
++{
++    return window && !window->isDeleted() && window->isClient() && window->wantsTabFocus()
++        && window->isMinimizable() && window->isOnCurrentDesktop() && window->isOnCurrentActivity()
++        && !window->isSpecialWindow() && !window->keepAbove() && !window->keepBelow();
 +}
 +
 +QAction *createTouchpadAction(QObject *parent, Workspace *receiver, void (Workspace::*slot)())
@@ -913,6 +934,8 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
 +{
 +    if (actionName == QLatin1String("MinimizeAll")) {
 +        input()->registerTouchpadSwipeShortcut(direction, fingerCount, createTouchpadAction(workspace, workspace, &Workspace::slotTouchpadMinimizeAll));
++    } else if (actionName == QLatin1String("MaximizeWindows")) {
++        input()->registerTouchpadSwipeShortcut(direction, fingerCount, createTouchpadAction(workspace, workspace, &Workspace::slotTouchpadMaximizeWindows));
 +    } else if (actionName == QLatin1String("SwitchWindowPrevious")) {
 +        input()->registerTouchpadSwipeShortcut(direction, fingerCount, createTouchpadAction(workspace, workspace, &Workspace::slotTouchpadSwitchWindowBackward));
 +    } else if (actionName == QLatin1String("SwitchWindowNext")) {
@@ -925,7 +948,7 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
  UserActionsMenu::UserActionsMenu(QObject *parent)
      : QObject(parent)
      , m_menu(nullptr)
-@@ -980,6 +1023,12 @@
+@@ -980,6 +1034,12 @@
  
      initShortcut("Show Desktop", i18n("Peek at Desktop"),
                   Qt::META | Qt::Key_D, &Workspace::slotToggleShowDesktop, false);
@@ -938,7 +961,7 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
  
      initShortcut("Kill Window", i18n("Kill Window"), Qt::META | Qt::CTRL | Qt::Key_Escape, &Workspace::slotKillWindow, true);
  
-@@ -1422,6 +1471,128 @@
+@@ -1422,6 +1482,143 @@
      setShowingDesktop(!showingDesktop());
  }
  
@@ -955,7 +978,7 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
 +    QList<Window *> relevantWindows;
 +    bool minimize = false;
 +    for (Window *window : stackingOrder()) {
-+        if (!window->isMinimizable() || !window->isOnCurrentDesktop() || !window->isOnCurrentActivity()) {
++        if (!isTouchpadMinimizeCandidate(window)) {
 +            continue;
 +        }
 +        if (!window->isMinimized()) {
@@ -979,6 +1002,21 @@ diff -ruN kwin-6.7.1.orig/src/useractions.cpp kwin-6.7.1/src/useractions.cpp
 +    Window *restoredWindow = nullptr;
 +    for (Window *window : std::as_const(m_touchpadMinimizedWindows)) {
 +        if (window) {
++            window->setMinimized(false);
++            restoredWindow = window;
++        }
++    }
++    m_touchpadMinimizedWindows.clear();
++    if (restoredWindow) {
++        activateWindow(restoredWindow);
++    }
++}
++
++void Workspace::slotTouchpadMaximizeWindows()
++{
++    Window *restoredWindow = nullptr;
++    for (Window *window : stackingOrder()) {
++        if (isTouchpadMinimizeCandidate(window) && window->isMinimized()) {
 +            window->setMinimized(false);
 +            restoredWindow = window;
 +        }
@@ -1086,7 +1124,7 @@ diff -ruN kwin-6.7.1.orig/src/virtualdesktops.cpp kwin-6.7.1/src/virtualdesktops
  #include <QUuid>
  
  #include <algorithm>
-@@ -37,6 +39,22 @@
+@@ -37,6 +39,23 @@
  static bool s_loadingDesktopSettings = false;
  static const double GESTURE_SWITCH_THRESHOLD = .25;
  
@@ -1098,6 +1136,7 @@ diff -ruN kwin-6.7.1.orig/src/virtualdesktops.cpp kwin-6.7.1/src/virtualdesktops
 +        QStringLiteral("Disabled"),
 +        QStringLiteral("Overview"),
 +        QStringLiteral("MinimizeAll"),
++        QStringLiteral("MaximizeWindows"),
 +        QStringLiteral("SwitchWindowPrevious"),
 +        QStringLiteral("SwitchWindowNext"),
 +        QStringLiteral("PreviousVirtualDesktop"),
@@ -1109,7 +1148,7 @@ diff -ruN kwin-6.7.1.orig/src/virtualdesktops.cpp kwin-6.7.1/src/virtualdesktops
  static QString generateDesktopId()
  {
      return QUuid::createUuid().toString(QUuid::WithoutBraces);
-@@ -803,22 +821,18 @@
+@@ -803,22 +823,18 @@
              emitCurrentChanging();
          }
      };
@@ -1157,17 +1196,18 @@ diff -ruN kwin-6.7.1.orig/src/workspace.h kwin-6.7.1/src/workspace.h
  #include <QStringList>
  #include <QTimer>
  // std
-@@ -470,6 +472,9 @@
+@@ -470,6 +472,10 @@
      void slotWindowToPrevScreen();
  
      void slotToggleShowDesktop();
 +    void slotTouchpadMinimizeAll();
++    void slotTouchpadMaximizeWindows();
 +    void slotTouchpadSwitchWindowForward();
 +    void slotTouchpadSwitchWindowBackward();
  
      void slotWindowMaximize();
      void slotWindowMaximizeVertical();
-@@ -582,6 +587,9 @@
+@@ -582,6 +589,9 @@
      template<typename T, typename Slot>
      void initShortcut(const QString &actionName, const QString &description, const QKeySequence &shortcut, T *receiver, Slot slot, bool autoRepeat);
      void setupWindowShortcut(Window *window);
@@ -1177,7 +1217,7 @@ diff -ruN kwin-6.7.1.orig/src/workspace.h kwin-6.7.1/src/workspace.h
      bool switchWindow(Window *window, Direction direction, QPoint curPos, VirtualDesktop *desktop);
      void desktopResized(const QHash<Window *, LogicalOutput *> &oldOutputs);
  
-@@ -755,6 +763,10 @@
+@@ -755,6 +765,10 @@
      QList<QString> m_recentlyRemovedDpmsOffOutputs;
      QTimer m_dpmsTimer;
      std::shared_ptr<FileDescriptor> m_sleepInhibitor;

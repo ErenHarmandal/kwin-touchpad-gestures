@@ -4,11 +4,11 @@ KDE Plasma Wayland oturumunda KWin touchpad gesture davranisini patch tabanli ge
 
 ## Current stable behavior
 
-- 3 parmak yukari: Overview
-- 3 parmak asagi: Minimize All
-- 3 parmak sag/sol: TabBox overlay'i acmadan direct window switching
-- 4 parmak sag/sol: KWin virtual desktop switching korunur
-- System Settings icinde Touchpad Gestures KCM'i bu davranislari guvenli sabit seceneklerle ayarlar.
+- 3 parmak yukari: default olarak Overview
+- 3 parmak asagi: default olarak Maximize/Minimize All Windows
+- 3 parmak sag/sol: default olarak TabBox overlay'i acmadan direct window switching
+- 4 parmak sag/sol: default olarak KWin virtual desktop switching
+- System Settings icindeki Touchpad Gestures KCM'i 3 parmak yukari/asagi icin overview/toggle/restore aksiyonlarini, yatay gesture'larda pencere gecisi veya virtual desktop gecisi aksiyonlarini sectirir.
 - KCM sadece `kwinrc` `[TouchpadGestures]` grubunu degistirir; davranis degisiklikleri Plasma/KWin restart sonrasi uygulanir.
 
 ## Layout
