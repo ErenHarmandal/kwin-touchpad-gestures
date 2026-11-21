@@ -35,3 +35,9 @@ Kisa yol:
 scripts/build-package.sh
 scripts/status.sh
 ```
+
+## License
+
+The KWin gesture patches are provided under GPL-2.0-or-later. See [COPYING](COPYING) for the GNU GPL version 2 text. The patches preserve the copyright and SPDX notices from [upstream KWin](https://invent.kde.org/plasma/kwin).
+
+The `license` field in the Arch `PKGBUILD` identifies the packaged upstream software. This section documents the license for the patches distributed in this repository.

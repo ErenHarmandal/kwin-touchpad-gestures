@@ -25,6 +25,7 @@
 - Obsidian vault root is `docs/`; `.obsidian/` is local and ignored.
 
 ## Recent Changelog
+- 2026-11-21: Added the upstream GPL v2 text and documented the GPL-2.0-or-later license for the touchpad gesture patches.
 - 2026-06-27: **One-way minimize option removed.** `Minimize Windows` KCM secenegi ve `MinimizeWindows` runtime token'i stable yuzeyden kaldirildi; eski config degerleri yon default'una duser, Maximize/Minimize All Windows ve Maximize Windows korunur.
 - 2026-06-24: **Minimize candidates restricted.** Touchpad minimize/restore aksiyonlari artik yalnizca normal kullanici pencerelerini hedefler; Plasma shell/panel/OSD gibi special window yuzeyleri aday listesinden cikarildi.
 - 2026-06-24: **Swipe up actions expanded.** 3 parmak yukari KCM secenekleri Overview yaninda Maximize/Minimize All Windows, Minimize Windows ve Maximize Windows aksiyonlarini da sunar; default Overview korunur.
